@@ -1,4 +1,5 @@
 import { SprWebProver, WasmProverError, type Measurement } from "@heliuslabs/spr-web-prover";
+export type { ProvingKeySource } from "@heliuslabs/spr-web-prover";
 
 declare global {
   interface Window {

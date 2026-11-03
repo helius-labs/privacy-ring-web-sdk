@@ -1,6 +1,6 @@
 {
   "name": "@heliuslabs/spr-web-prover",
-  "version": "0.6.0-alpha",
+  "version": "0.7.0-alpha",
   "description": "Local Groth16 proving for Solana Privacy Rings in browsers.",
   "license": "Apache-2.0",
   "repository": {

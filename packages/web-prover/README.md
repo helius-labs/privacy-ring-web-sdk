@@ -117,6 +117,46 @@ The prover never fetches a catalog or policy itself. Omit `keyCatalog` to use th
 bundled URLs. See [UPSTREAM.md](../../UPSTREAM.md) for manifest provenance and
 sync instructions.
 
+## Runtime key updates
+
+`keySource` accepts an authenticated `ProvingKeySet` from protocol SDK
+`0.8.1-alpha` or later. It can replace the bundled checksums for compatible
+confidential signer transfers and merges; a raw `keyCatalog` cannot.
+
+```ts
+import { SignedTeePolicy, ZolanaClient } from "@heliuslabs/zolana/client";
+import { ZolanaWebProver } from "@heliuslabs/zolana-web-prover";
+
+const provingKeys = await new ZolanaClient({
+  proverUrl: "https://your-prover.example/v1/spr",
+  proverTee: SignedTeePolicy.forNetwork("devnet"),
+}).fetchProvingKeySet();
+const proverUrl = "http://127.0.0.1:3001";
+const prover = new ZolanaWebProver({ proverUrl, keySource: provingKeys });
+const client = new ZolanaClient({
+  solanaRpcUrl: "https://your-solana-rpc.example",
+  indexerUrl: "https://your-photon.example",
+  proverUrl,
+  proofDataSource: "client",
+  provingKeys,
+  fetch: prover.createFetch(),
+});
+```
+
+The prover must serve the runtime metadata and match the on-chain verifier.
+One instance keeps one snapshot; download a fresh set and create new instances
+between runs. Downloads, sizes, checksums and worker key identities come from
+that snapshot. Runtime generations have separate caches and do not delete each
+other; use `clearKeys()` on an obsolete instance to reclaim its files.
+Use `prover.provingKeys()` for current file sizes; `ShapeKey.keyBytes` describes
+the bundled key set.
+
+`keySource`, `keyCatalog` and `keyBaseUrl` are mutually exclusive. A custom
+`ProvingKeySource` is an explicit trust decision by the application: authenticate
+and approve its metadata before passing it in. New proof-input layouts, circuits
+or solver features still need an SDK/runtime update. Old proofs must be rebuilt
+after their keys are replaced on chain.
+
 ## Prefetch
 
 ```ts
