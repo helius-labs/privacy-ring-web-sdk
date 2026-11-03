@@ -155,8 +155,9 @@ try {
     } };
     return message.method === "Network.requestWillBeSent" ? [message.params.request] : [];
   });
-  assert.ok(requests.some((r) => r.method === "GET" && new URL(r.url).pathname.endsWith("/tee/v1/attestation")), "missing TEE attestation");
+  assert.ok(requests.some((r) => r.method === "GET" && new URL(r.url).pathname.endsWith("/attestation")), "missing TEE attestation");
   assert.ok(requests.some((r) => r.method === "POST" && /\/prove(?:\/|$)/u.test(new URL(r.url).pathname) &&
+    Object.keys(r.headers).some((key) => key.toLowerCase() === "spr-tee") &&
     Object.entries(r.headers).some(([key, value]) => key.toLowerCase() === "content-type" && value === "application/octet-stream")),
   "missing encrypted proof request");
   await act(driver, "toggle-merging", "Disable merging");

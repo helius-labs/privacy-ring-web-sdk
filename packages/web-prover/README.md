@@ -54,7 +54,7 @@ try {
 }
 ```
 
-`proveRequest` takes a `/prove` JSON body and returns proof JSON after local verification. Supports `@heliuslabs/zolana` 0.6.0-alpha transfers and merges of up to 24 notes (`MAX_BROWSER_MERGE_INPUTS`). Each proof includes `provingKeySha256` for the SDK’s key pin check. If a GPU proof fails verification, the same request is retried on the CPU.
+`proveRequest` takes a `/prove` JSON body and returns proof JSON after local verification. Supports `@heliuslabs/zolana` 0.8.0-alpha transfers and merges of up to 24 notes (`MAX_BROWSER_MERGE_INPUTS`). Each proof includes `provingKeySha256` for the SDK’s key pin check. If a GPU proof fails verification, the same request is retried on the CPU.
 
 ### With `@heliuslabs/zolana`
 
@@ -62,29 +62,27 @@ Supply remote endpoints and a reviewed deployment policy in your app:
 
 ```ts
 import { createZolanaClient } from "@heliuslabs/zolana";
-import { teePolicyFromJson } from "@heliuslabs/zolana/client";
-import policyFile from "./prover-policy.json" with { type: "json" };
+import { SignedTeePolicy } from "@heliuslabs/zolana/client";
 
 const remoteClient = await createZolanaClient({
   solanaRpcUrl,
   indexerUrl,
   proverUrl,
-  proverTee: teePolicyFromJson(policyFile.deployment),
+  proverTee: SignedTeePolicy.forNetwork("devnet"), // or "mainnet"
 });
 ```
 
-The published 0.6.0 parser takes the bare policy; extracting `deployment` also
-works with the newer parser that accepts the release wrapper. Pin reviewed JSON
-and its checksum independently of the SDK release. Include the complete policy,
-including its HPKE public-key pin. Never obtain trust pins from the prover being
-verified. `ZOLANA_DEPLOYMENTS` has been removed: migrate those presets into your
-app. The wallet example shows devnet and mainnet configuration and policy files.
+The SDK verifies the network policy with its pinned signing keys, refreshes it
+with attestation, and refuses expired or invalid policies. Select the network
+explicitly; changing a proxy URL does not change trust. Custom deployments may
+supply a complete reviewed static policy with `teePolicyFromJson` instead.
+The wallet example shows devnet and mainnet configuration.
 `ZOLANA_PROGRAM_IDS` and `ZOLANA_PROTOCOL_VERSION` still describe protocol compatibility.
 
 For local proofs, use a loopback URL and omit `proverTee`. Keep the explicit policy
 on a separate client when using remote merges.
 
-Pass `prover.createFetch()` as `fetch`, set `proofDataSource: "client"`, and use the same loopback `proverUrl` on the client (0.6.0-alpha encrypts non-loopback prover calls for an enclave). Then prove through `LocalKeys.fromKeypair` or, in a wallet, `LocalKeys.fromDerivationSeed`. Paths under that URL’s `/prove` are answered locally; everything else is delegated.
+Pass `prover.createFetch()` as `fetch`, set `proofDataSource: "client"`, and use the same loopback `proverUrl` on the client (0.8.0-alpha encrypts non-loopback prover calls for an enclave). Then prove through `LocalKeys.fromKeypair` or, in a wallet, `LocalKeys.fromDerivationSeed`. Paths under that URL’s `/prove` are answered locally; everything else is delegated.
 
 ## Self-host keys
 

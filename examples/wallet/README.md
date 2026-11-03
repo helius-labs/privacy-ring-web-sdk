@@ -1,6 +1,6 @@
 # Private wallet with local proving and TEE merges
 
-A private wallet on devnet-e using v0.6.0-alpha. Transfers and withdrawals are proved in the browser with at most eight input notes. If a payment, including its app fee, needs more notes, merge them through the TEE first.
+A private wallet on devnet-e using SDK 0.8.0-alpha. Transfers and withdrawals are proved in the browser with at most eight input notes. If a payment, including its app fee, needs more notes, merge them through the TEE first.
 
 The whole integration is in [`src/zolana.ts`](src/zolana.ts):
 
@@ -66,9 +66,16 @@ Drives the page in Chrome with a fresh key funded with 0.05 devnet SOL: register
 ## Deployment configuration
 
 `src/deployments.ts` is example configuration, independent of the prover package.
-Its reviewed policy files in `policies/` include Nitro measurements and the HPKE
-key pin. `VITE_TEE_POLICY` accepts replacement policy JSON (bare or a deployment
-wrapper); `VITE_TEE_PROVER_URL` changes the URL without selecting a different
-policy. Review and pin the policy before distributing it. The local transfer
+It uses `SignedTeePolicy.forNetwork` for the selected network. The SDK verifies
+policy signatures against pinned signing keys and checks network, expiry and
+version before attestation. `VITE_TEE_POLICY` accepts a reviewed static policy
+(bare or a deployment wrapper) for custom deployments; this override requires
+application-managed updates. `VITE_TEE_PROVER_URL` changes the URL without
+selecting a different policy. Gateways now use `/v1/spr`, `/attestation` and
+`Spr-Tee*` headers. The local transfer
 client uses loopback interception and needs no policy; the separate merge client
 always receives the configured remote policy explicitly.
+
+The 0.8 upgrade keeps the same program IDs and notes, but rotates the core
+proving keys. The browser downloads and verifies the new keys automatically;
+self-hosted keys must be updated. Rebuild proofs prepared with the old keys.

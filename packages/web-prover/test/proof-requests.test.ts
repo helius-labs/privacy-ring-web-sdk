@@ -72,14 +72,14 @@ it.each([
   expect(proveRoute(new URL(url), "http://localhost/prover/")).toEqual(route);
 });
 it("routes the Helius gateway's key-less prove path", () => {
-  const gateway = "https://devnet.helius-rpc.com/v1/zolana?api-key=secret";
+  const gateway = "https://devnet.helius-rpc.com/v1/spr?api-key=secret";
   expect(
-    proveRoute(new URL("https://devnet.helius-rpc.com/v1/zolana/prove?api-key=secret"), gateway),
+    proveRoute(new URL("https://devnet.helius-rpc.com/v1/spr/prove?api-key=secret"), gateway),
   ).toEqual({ kind: "prove" });
   expect(
-    proveRoute(new URL("https://devnet.helius-rpc.com/v1/zolana/prove/status?jobId=1"), gateway),
+    proveRoute(new URL("https://devnet.helius-rpc.com/v1/spr/prove/status?jobId=1"), gateway),
   ).toEqual({ kind: "unsupported" });
-  expect(proveRoute(new URL("https://devnet.helius-rpc.com/v1/zolana/getIndexerSlot"), gateway)).toBe(
+  expect(proveRoute(new URL("https://devnet.helius-rpc.com/v1/spr/getIndexerSlot"), gateway)).toBe(
     undefined,
   );
 });

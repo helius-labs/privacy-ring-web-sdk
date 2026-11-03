@@ -1,24 +1,21 @@
-// Application configuration. Policies are reviewed JSON, never learned from a prover.
-import { teePolicyFromJson } from "@heliuslabs/zolana/client";
-import devnet from "../policies/devnet.json" with { type: "json" };
-import mainnet from "../policies/mainnet.json" with { type: "json" };
+// Application configuration. Policy selection is independent of the prover URL.
+import { SignedTeePolicy, teePolicyFromJson } from "@heliuslabs/zolana/client";
 
-/** Unwrap release files for compatibility with the published 0.6.0 parser. */
 export function remoteProverConfig(proverUrl: string, policyFile: unknown) {
-  const policy = policyFile !== null && typeof policyFile === "object" && "deployment" in policyFile
-    ? policyFile.deployment : policyFile;
-  return { proverUrl, proverTee: teePolicyFromJson(policy) };
+  return { proverUrl, proverTee: teePolicyFromJson(policyFile) };
 }
 
 export const deployments = {
   devnet: {
     solanaRpcUrl: "https://api.devnet.solana.com",
     indexerUrl: "https://d34xe1hqb2ibg2.cloudfront.net",
-    ...remoteProverConfig("https://dd73hh473h6ha.cloudfront.net", devnet),
+    proverUrl: "https://dd73hh473h6ha.cloudfront.net",
+    proverTee: SignedTeePolicy.forNetwork("devnet"),
   },
   mainnet: {
     solanaRpcUrl: "https://api.mainnet-beta.solana.com",
     indexerUrl: "https://dgcj4pjarvo65.cloudfront.net",
-    ...remoteProverConfig("https://d3ky2kt0ntqxt1.cloudfront.net", mainnet),
+    proverUrl: "https://d3ky2kt0ntqxt1.cloudfront.net",
+    proverTee: SignedTeePolicy.forNetwork("mainnet"),
   },
 } as const;

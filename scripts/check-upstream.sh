@@ -21,7 +21,7 @@ failed=0
 fail() { echo "drift: $*" >&2; failed=1; }
 
 # The tag must still name the pinned commit: a moved tag means a re-cut release.
-tagged="$(git ls-remote --tags "$repository" "refs/tags/$tag^{}" "refs/tags/$tag" | awk '{ print $1 }' | head -1)"
+tagged="$(git ls-remote --tags "$repository" "refs/tags/$tag^{}" "refs/tags/$tag" | awk '{ direct = $1 } /\^\{\}$/ { peeled = $1 } END { print peeled ? peeled : direct }')"
 [[ "$tagged" == "$revision" ]] || fail "tag $tag is at ${tagged:-<missing>}, upstream.lock.json pins $revision"
 
 source_dir="${ZOLANA_SRC:-}"
