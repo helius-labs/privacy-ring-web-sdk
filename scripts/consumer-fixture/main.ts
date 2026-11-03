@@ -1,4 +1,5 @@
 import { ZolanaWebProver, WasmProverError, type Measurement } from "@heliuslabs/zolana-web-prover";
+export type { ProvingKeySource } from "@heliuslabs/zolana-web-prover";
 
 declare global {
   interface Window {

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.1-alpha — unreleased
+
+- `keySource` accepts an authenticated runtime key set, including new download URLs, sizes and checksums, for compatible transfer and merge circuits.
+- Runtime key sets stay fixed per prover instance and use separate caches; clear obsolete instances with `clearKeys()`.
+
 ## 0.6.0-alpha — 2026-11-03
 
 - Match `@heliuslabs/zolana` 0.8.0-alpha and the finalized core ceremony keys. Existing key caches are invalidated by the new key set; self-hosted deployments must install the new keys.

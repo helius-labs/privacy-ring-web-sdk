@@ -19,7 +19,7 @@ export {
   ZOLANA_PROGRAM_IDS,
   ZOLANA_PROTOCOL_VERSION,
 } from "./protocol.js";
-export type { ProvingKeyCatalog } from "./key-catalog.js";
+export type { ProvingKeyCatalog, ProvingKeySource } from "./key-catalog.js";
 export type { KeyProgress, Measurement } from "./measurement.js";
 export type { WasmProverErrorCode } from "./errors.js";
 

@@ -14,7 +14,7 @@
 import { abortable, rethrowAbort } from "./abortable.js";
 import { WasmProverError } from "./errors.js";
 import { KEY_BASE_URL, KEY_DIGESTS, KEY_SET } from "./key-digests.js";
-import { catalogKeyUrls, type ProvingKeyCatalog } from "./key-catalog.js";
+import { catalogKeyUrls, sourceKeys, type ProvingKeyCatalog, type ProvingKeySource } from "./key-catalog.js";
 import { MERGE_SHAPES, TRANSFER_SHAPES, type ShapeKey } from "./shapes.js";
 
 /** One entry of `KEY_DIGESTS`, copied from `zopro-keys.lock`. */
@@ -56,6 +56,7 @@ export interface KeyStoreOptions {
   readonly keyBaseUrl?: string;
   /** Download URLs from /proving-keys, checked against the bundled pins. */
   readonly keyCatalog?: ProvingKeyCatalog;
+  readonly keySource?: ProvingKeySource;
   readonly fetch: typeof globalThis.fetch;
   /** Ask the browser to keep the keys under storage pressure. */
   readonly persistStorage?: boolean;
@@ -64,18 +65,29 @@ export interface KeyStoreOptions {
 export class KeyStore {
   readonly #options: KeyStoreOptions;
   readonly #catalogUrls: ReadonlyMap<string, string> | undefined;
+  readonly #sourceKeys: ReturnType<typeof sourceKeys>["keys"] | undefined;
+  readonly #cacheName: string;
   #prepared = false;
   #cache: Cache | undefined;
 
   constructor(options: KeyStoreOptions) {
     this.#options = options;
-    if (options.keyCatalog !== undefined && options.keyBaseUrl !== undefined)
+    if ([options.keyCatalog, options.keyBaseUrl, options.keySource].filter((value) => value !== undefined).length > 1)
       throw new WasmProverError("wasm_key_catalog_invalid");
+    const source = options.keySource === undefined ? undefined : sourceKeys(options.keySource);
+    this.#sourceKeys = source?.keys;
+    this.#cacheName = source === undefined
+      ? `${keyCachePrefix}-${KEY_SET}` : `zolana-runtime-proving-keys-${source.cacheKey}`;
     this.#catalogUrls = options.keyCatalog === undefined ? undefined : catalogKeyUrls(options.keyCatalog);
   }
 
   /** The URL of the shape's zopro key file. */
   url(shape: ShapeKey): string {
+    if (this.#sourceKeys !== undefined) {
+      const key = this.#sourceKeys.get(shape.keyFile);
+      if (key === undefined) throw new WasmProverError("wasm_key_manifest_error");
+      return key.url;
+    }
     if (this.#catalogUrls !== undefined) {
       const url = this.#catalogUrls.get(shape.keyFile);
       if (url === undefined) throw new WasmProverError("wasm_key_manifest_error");
@@ -86,7 +98,7 @@ export class KeyStore {
 
   /** The shape's pinned key file, size and sha256; a shape outside the key set has none. */
   digest(shape: ShapeKey): KeyDigest {
-    const expected = KEY_DIGESTS[shape.keyFile];
+    const expected = this.#sourceKeys === undefined ? KEY_DIGESTS[shape.keyFile] : this.#sourceKeys.get(shape.keyFile);
     if (expected === undefined) throw new WasmProverError("wasm_key_manifest_error");
     return expected;
   }
@@ -95,8 +107,8 @@ export class KeyStore {
   async status(signal: AbortSignal): Promise<readonly ProvingKeyStatus[]> {
     const cache = await this.#open(signal);
     const statuses: ProvingKeyStatus[] = [];
-    for (const shape of [...TRANSFER_SHAPES, ...MERGE_SHAPES].sort((a, b) => a.keyBytes - b.keyBytes)) {
-      const expected = KEY_DIGESTS[shape.keyFile];
+    for (const shape of [...TRANSFER_SHAPES, ...MERGE_SHAPES].sort((a, b) => this.digest(a).size - this.digest(b).size)) {
+      const expected = this.digest(shape);
       if (expected === undefined) continue;
       if (this.#catalogUrls !== undefined && !this.#catalogUrls.has(shape.keyFile)) continue;
       const status = { keyFile: shape.keyFile, size: expected.size, downloaded: 0, decoded: false };
@@ -119,12 +131,12 @@ export class KeyStore {
   /** Removes the kept keys, their raw forms and interrupted downloads. */
   async clear(signal: AbortSignal): Promise<void> {
     this.#cache = undefined;
-    await optionalCache(() => globalThis.caches?.delete(keyCacheName), signal);
+    await optionalCache(() => globalThis.caches?.delete(this.#cacheName), signal);
   }
 
   /** Whether the store keeps this shape's raw form, written by a runtime of `rawKeyFormat`. */
   async rawKept(shape: ShapeKey, rawKeyFormat: string, signal: AbortSignal): Promise<boolean> {
-    const expected = KEY_DIGESTS[shape.keyFile];
+    const expected = this.digest(shape);
     const cache = await this.#open(signal);
     if (expected === undefined || cache === undefined) return false;
     const hit = await optionalCache(() => cache.match(rawKeyUrl(this.url(shape))), signal);
@@ -201,15 +213,17 @@ export class KeyStore {
     if (this.#cache !== undefined) return this.#cache;
     if (!this.#prepared) {
       this.#prepared = true;
-      const names = await optionalCache(() => globalThis.caches?.keys(), signal);
+      // Another live prover may still be using an earlier runtime generation.
+      const names = this.#sourceKeys === undefined
+        ? await optionalCache(() => globalThis.caches?.keys(), signal) : [];
       for (const name of names ?? []) {
-        if (name.startsWith(keyCachePrefix) && name !== keyCacheName)
+        if (name.startsWith(keyCachePrefix) && name !== this.#cacheName)
           await optionalCache(() => globalThis.caches?.delete(name), signal);
       }
       if (this.#options.persistStorage === true)
         await optionalCache(() => globalThis.navigator?.storage?.persist(), signal);
     }
-    this.#cache = await optionalCache(() => globalThis.caches?.open(keyCacheName), signal);
+    this.#cache = await optionalCache(() => globalThis.caches?.open(this.#cacheName), signal);
     return this.#cache;
   }
 
@@ -391,7 +405,6 @@ export class KeyStore {
 
 /** The prefix of every key set's store; stores of other key sets are deleted. */
 const keyCachePrefix = "zolana-proving-keys";
-const keyCacheName = `${keyCachePrefix}-${KEY_SET}`;
 const rawSourceHeader = "x-zolana-pinned-sha256";
 const rawFormatHeader = "x-zolana-raw-format";
 const rawSizeHeader = "x-zolana-raw-size";

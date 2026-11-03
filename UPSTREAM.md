@@ -24,6 +24,12 @@ Runtime `keyCatalog` input can change download URLs only for conversions whose
 checksums and sizes match the bundled pins. It neither adds supported circuits
 nor replaces the trusted conversion manifest.
 
+The optional `keySource` API accepts the authenticated `ProvingKeySet` returned
+by protocol SDK `0.8.1-alpha`'s `fetchProvingKeySet()`. This needs the matching
+prover catalog deployment. It does not change the bundled default pins or the
+example's protocol dependency. Runtime rotations must preserve the proof-input
+contract and use solver features this pinned runtime supports.
+
 The runtime is zopro-zolana at the revision `runtime.lock.json` pins (`scripts/build-runtime.sh`).
 
 Source mapping:
