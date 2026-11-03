@@ -120,7 +120,7 @@ sync instructions.
 ## Runtime key updates
 
 `keySource` accepts an authenticated `ProvingKeySet` from protocol SDK
-`0.8.1-alpha` or later. It can replace the bundled checksums for compatible
+`0.9.0-alpha` or later. It can replace the bundled checksums for compatible
 confidential signer transfers and merges; a raw `keyCatalog` cannot.
 
 ```ts
