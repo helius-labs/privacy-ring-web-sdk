@@ -54,7 +54,7 @@ try {
 }
 ```
 
-`proveRequest` takes a `/prove` JSON body and returns proof JSON after local verification. Supports `@heliuslabs/zolana` 0.8.0-alpha transfers and merges of up to 24 notes (`MAX_BROWSER_MERGE_INPUTS`). Each proof includes `provingKeySha256` for the SDK’s key pin check. If a GPU proof fails verification, the same request is retried on the CPU.
+`proveRequest` takes a `/prove` JSON body and returns proof JSON after local verification. Supports `@heliuslabs/spr` 0.9.0-alpha transfers and merges of up to 24 notes (`MAX_BROWSER_MERGE_INPUTS`). Each proof includes `provingKeySha256` for the SDK’s key pin check. If a GPU proof fails verification, the same request is retried on the CPU.
 
 ### With `@heliuslabs/spr`
 
@@ -120,20 +120,20 @@ sync instructions.
 ## Runtime key updates
 
 `keySource` accepts an authenticated `ProvingKeySet` from protocol SDK
-`0.8.1-alpha` or later. It can replace the bundled checksums for compatible
+`0.9.0-alpha` or later. It can replace the bundled checksums for compatible
 confidential signer transfers and merges; a raw `keyCatalog` cannot.
 
 ```ts
-import { SignedTeePolicy, ZolanaClient } from "@heliuslabs/zolana/client";
-import { ZolanaWebProver } from "@heliuslabs/zolana-web-prover";
+import { SignedTeePolicy, SprClient } from "@heliuslabs/spr/client";
+import { SprWebProver } from "@heliuslabs/spr-web-prover";
 
-const provingKeys = await new ZolanaClient({
+const provingKeys = await new SprClient({
   proverUrl: "https://your-prover.example/v1/spr",
   proverTee: SignedTeePolicy.forNetwork("devnet"),
 }).fetchProvingKeySet();
 const proverUrl = "http://127.0.0.1:3001";
-const prover = new ZolanaWebProver({ proverUrl, keySource: provingKeys });
-const client = new ZolanaClient({
+const prover = new SprWebProver({ proverUrl, keySource: provingKeys });
+const client = new SprClient({
   solanaRpcUrl: "https://your-solana-rpc.example",
   indexerUrl: "https://your-photon.example",
   proverUrl,
