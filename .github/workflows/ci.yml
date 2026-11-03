@@ -40,7 +40,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           repository: helius-labs/zolana
-          ref: 5cfd7eaed15ef29dc95f6b212cd2844ed0e86860
+          ref: 6bb4f7008294695ebe614f08affb215d4321a538
           path: target/protocol-sdk
       - name: Build the merged protocol SDK
         working-directory: target/protocol-sdk/sdk-libs/ts
@@ -48,13 +48,13 @@ jobs:
           npm ci
           npm pack --pack-destination "$RUNNER_TEMP" --json > "$RUNNER_TEMP/protocol-sdk-pack.json"
       - name: Check wallet compatibility with the merged SDK
-        working-directory: examples/wallet
         run: |
           archive="$(node -p 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))[0].filename' "$RUNNER_TEMP/protocol-sdk-pack.json")"
-          npm install --no-save --package-lock=false --workspaces=false "$RUNNER_TEMP/$archive" ../../packages/web-prover
-          npm run typecheck
-          npm test
-          npm run build
+          # The wallet and shared scripts must use the same SignedTeePolicy class.
+          npm install --no-save --package-lock=false "$RUNNER_TEMP/$archive"
+          npm run typecheck --workspace @zolana/wallet-example
+          npm test --workspace @zolana/wallet-example
+          npm run build --workspace @zolana/wallet-example
 
   # The bench page, built once for every runner, with the keys from the key
   # CDN as an app loads them.
@@ -77,7 +77,7 @@ jobs:
       - run: npm run setup
       - run: npm run build:example
         env:
-          VITE_ZOLANA_KEYS_URL: https://d3gbdb0egjwcw9.cloudfront.net/proving-keys/8e234b5a589cfb79
+          VITE_ZOLANA_KEYS_URL: https://d3gbdb0egjwcw9.cloudfront.net/proving-keys/78751f5d1c591777
       - uses: actions/upload-artifact@v7
         with:
           name: bench-page

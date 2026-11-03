@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0-alpha — 2026-11-03
+
+- Match `@heliuslabs/zolana` 0.8.0-alpha and the finalized core ceremony keys. Existing key caches are invalidated by the new key set; self-hosted deployments must install the new keys.
+- Rebuild both WASM runtimes with the fix for transfers of 22 or more inputs.
+- Use network-selected signed TEE policies in the wallet example. Remote gateways use `/v1/spr`, `/attestation` and `Spr-Tee*` headers through the protocol SDK.
+- Program IDs and note state are unchanged by this upgrade. Rebuild unsubmitted proofs made with the previous keys.
+
 ## 0.5.0-alpha — 2026-10-29
 
 - Breaking: remove `ZOLANA_DEPLOYMENTS` and `ZolanaNetwork`. Deployment configuration lives in the wallet example; applications supply remote URLs and complete reviewed policies.

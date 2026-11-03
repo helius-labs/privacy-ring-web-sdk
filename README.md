@@ -6,15 +6,16 @@ Local Zolana Groth16 proving in the browser: [`@heliuslabs/zolana-web-prover`](p
 
 ## Packages
 
-- [`@heliuslabs/zolana-web-prover`](packages/web-prover/README.md) — worker, keys, local prove/verify, and a `fetch` shim for the protocol SDK. Matches `@heliuslabs/zolana` 0.6.0-alpha (merges of up to 24 notes).
+- [`@heliuslabs/zolana-web-prover`](packages/web-prover/README.md) — worker, keys, local prove/verify, and a `fetch` shim for the protocol SDK. Matches `@heliuslabs/zolana` 0.8.0-alpha (merges of up to 24 notes).
 - [`examples/wallet`](examples/wallet/README.md) — private wallet on devnet-e (register, shield, send, unshield); start here for an end-to-end flow.
 - `examples/browser` — synthetic-request benchmark and timing harness.
 
-The protocol pin is **v0.6.0-alpha**,
-`8ae430a154e22bafa819a570d383d04e2046e802`. Applications supply their RPC,
+The protocol pin is **v0.8.0-alpha**,
+`c4062d3860965855e47268f61b01a27e774096eb`. Applications supply their RPC,
 indexer and remote prover URLs and reviewed TEE policy. Deployment configuration
-lives in the [wallet example](examples/wallet/src/deployments.ts), with complete
-policy JSON in `examples/wallet/policies`; it is not exported by the prover package.
+lives in the [wallet example](examples/wallet/src/deployments.ts), which selects
+`SignedTeePolicy.forNetwork("devnet" | "mainnet")` from the protocol SDK. The prover
+package does not select remote deployments or policies.
 
 The example defaults to devnet-e. Set `VITE_ZOLANA_NETWORK=mainnet` and a matching
 `VITE_SOLANA_RPC_URL` for mainnet testing. `VITE_TEE_PROVER_URL` and `VITE_TEE_POLICY`

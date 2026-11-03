@@ -31,7 +31,8 @@ for (const network of ["devnet", "mainnet"] as const) {
     assert.equal(response.status, 200);
     assert.equal((await response.json() as { result?: unknown }).result, "ok");
     await client.attestProver();
-    console.log(`${network}: genesis, v0.6 programs, Photon health and Nitro attestation verified`);
+    await client.checkProverProvingKeys();
+    console.log(`${network}: genesis, programs, Photon health, signed-policy attestation and proving-key pins verified`);
   } catch (error) {
     // RPC URLs can contain credentials. Do not print transport error details.
     console.error(`${network}: deployment check failed (${error instanceof Error ? error.name : "unknown error"})`);
