@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the prover runtime, zopro-zolana for the browser, at the zopro
+# Builds the prover runtime, zopro-spr for the browser, at the zopro
 # repository, path and revision runtime.lock.json pins, into the package's
 # src/runtime with a manifest of its files (path, size, sha256); the package
 # ships it beside the compiled worker and the app's bundler emits it. It is
@@ -19,7 +19,7 @@ rust_toolchain="$(pin rustToolchain)"
 bindgen_version="$(pin wasmBindgen)"
 revision="$(pin zopro.revision)"
 out="$root/packages/web-prover/src/runtime"
-# The single-thread build's flags, in place of zopro-zolana's .cargo/config.toml,
+# The single-thread build's flags, in place of zopro-spr's .cargo/config.toml,
 # which asks for atomics and shared memory.
 single_rustflags="-C target-feature=+bulk-memory,+mutable-globals,+simd128 -C link-arg=--max-memory=4294967296"
 fixtures="$root/examples/browser/public/fixtures"
@@ -90,7 +90,7 @@ build() {
     echo "Expected one Rayon worker helper in the runtime build" >&2
     exit 1
   fi
-  replace "${helpers[0]}" "import('../../..')" "import('../../../zopro_zolana.js')"
+  replace "${helpers[0]}" "import('../../..')" "import('../../../zopro_spr.js')"
 
   if [[ -e "$work/bindgen/single/snippets" ]]; then
     echo "The single-thread runtime must not start threads" >&2
@@ -100,7 +100,7 @@ build() {
   rm -rf "$out"
   for variant in threads single; do
     mkdir -p "$out/$variant"
-    install -m 644 "$work/bindgen/$variant"/zopro_zolana{.js,.d.ts,_bg.wasm} "$out/$variant/"
+    install -m 644 "$work/bindgen/$variant"/zopro_spr{.js,.d.ts,_bg.wasm} "$out/$variant/"
   done
   cp -R "$work/bindgen/threads/snippets" "$out/threads/snippets"
   install -m 644 "$zopro/crates/zopro-core/LICENSE-APACHE" "$zopro/crates/zopro-core/LICENSE-MIT" "$out/"
@@ -123,7 +123,7 @@ for (const entry of await readdir(out, { recursive: true, withFileTypes: true })
 files.sort((a, b) => a.path.localeCompare(b.path));
 const helper = files.find(({ path }) => path.startsWith("threads/snippets/") && path.endsWith("/workerHelpers.js"));
 if (helper === undefined) throw new Error("the runtime is missing the thread pool's worker helper");
-if (!(await readFile(join(out, helper.path), "utf8")).includes("import('../../../zopro_zolana.js')"))
+if (!(await readFile(join(out, helper.path), "utf8")).includes("import('../../../zopro_spr.js')"))
   throw new Error("the thread pool's worker helper must import the runtime by its file name");
 const manifest = {
   format: 3,
@@ -134,23 +134,23 @@ const manifest = {
 };
 await writeFile(join(out, "manifest.json"), `${JSON.stringify(manifest, null, 2)}\n`);
 NODE
-  echo "runtime $(shasum -a 256 "$out/threads/zopro_zolana_bg.wasm" | cut -c1-12) (threads)," \
-    "$(shasum -a 256 "$out/single/zopro_zolana_bg.wasm" | cut -c1-12) (single thread) from zopro $built in $out"
+  echo "runtime $(shasum -a 256 "$out/threads/zopro_spr_bg.wasm" | cut -c1-12) (threads)," \
+    "$(shasum -a 256 "$out/single/zopro_spr_bg.wasm" | cut -c1-12) (single thread) from zopro $built in $out"
 }
 
-# Builds zopro-zolana's cdylib into the target directory $2 with the flags $3
-# (zopro-zolana's own when empty), and its bindings into $work/bindgen/$1.
+# Builds zopro-spr's cdylib into the target directory $2 with the flags $3
+# (zopro-spr's own when empty), and its bindings into $work/bindgen/$1.
 compile() {
   local variant=$1 target=$2 rustflags=$3
   (
-    cd "$zopro/crates/zopro-zolana"
+    cd "$zopro/crates/zopro-spr"
     [[ -z "$rustflags" ]] || export RUSTFLAGS="$rustflags"
     CARGO_TARGET_DIR="$target" CARGO_PROFILE_RELEASE_LTO=false \
       rustup run "$rust_toolchain" cargo rustc --release --locked --target wasm32-unknown-unknown \
       --crate-type cdylib --features wgpu
   )
-  "$bindgen" --target web --out-name zopro_zolana --out-dir "$work/bindgen/$variant" \
-    "$target/wasm32-unknown-unknown/release/zopro_zolana.wasm"
+  "$bindgen" --target web --out-name zopro_spr --out-dir "$work/bindgen/$variant" \
+    "$target/wasm32-unknown-unknown/release/zopro_spr.wasm"
 }
 
 replace() {

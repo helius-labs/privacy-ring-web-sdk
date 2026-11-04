@@ -30,7 +30,7 @@ try {
         self.onmessage = async ({ data }) => {
           const out = [];
           try {
-            const m = await import(data.base + data.runtime + "zopro_zolana.js");
+            const m = await import(data.base + data.runtime + "zopro_spr.js");
             await m.default();
             await m.initThreadPool(data.threads);
             m.gpu_profile(true);
@@ -41,7 +41,7 @@ try {
               const file = merge ? "merge_" + i + "_1" : "transfer_confidential_" + i + "_" + o;
               const request = await (await fetch(data.base + "/fixtures/" + (merge ? shape : "transfer-" + shape) + ".json")).text();
               const key = new Uint8Array(await (await fetch(data.base + "/keys/" + file + ".zopro")).arrayBuffer());
-              const prover = new m.ZolanaProver(key);
+              const prover = new m.SprProver(key);
               await prover.prove(request);
               m.gpu_profile_report();
               const times = [];

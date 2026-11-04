@@ -2,7 +2,7 @@
 /**
  * Hosts the prover runtime off the main thread.
  *
- * The runtime is zopro-zolana built for the browser: one WebAssembly module
+ * The runtime is zopro-spr built for the browser: one WebAssembly module
  * that loads a key, builds the witness, proves on a thread pool (and WebGPU
  * where the page has it) and verifies the proof before it returns it. A
  * proof takes seconds, so this is a worker. Every operation is timed here
@@ -23,13 +23,13 @@ import {
   importThreadedRuntime,
   type ProofValue,
   type Runtime,
-  type ZolanaProver,
+  type SprProver,
 } from "./runtime.js";
 
 let runtime: Runtime | undefined;
 let pooled = false;
 let activeThreads = 0;
-let loaded: { fileName: string; prover: ZolanaProver } | undefined;
+let loaded: { fileName: string; prover: SprProver } | undefined;
 
 // Rayon's helpers wait for every thread to report ready, and a thread whose script
 // the page refuses never does; a pool that has not started by then has failed.
@@ -107,13 +107,13 @@ async function loadKey(
   // One key at a time: its points are most of the wasm heap.
   loaded?.prover.free();
   loaded = undefined;
-  let prover: ZolanaProver;
+  let prover: SprProver;
   if (pooled || isRawKey(key)) {
-    prover = new module.ZolanaProver(key);
+    prover = new module.SprProver(key);
   } else {
     const vectors = await decodeKey(module, key, decoderWorkers());
     if (vectors.length !== 5) throw new Error("key decompress returned the wrong vectors");
-    prover = module.ZolanaProver.from_vectors(
+    prover = module.SprProver.from_vectors(
       key,
       vectors[0]!,
       vectors[1]!,

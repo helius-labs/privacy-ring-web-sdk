@@ -64,10 +64,10 @@ try {
   );
   // Both runtimes ship in the package as built, beside the worker the app's bundler emits.
   for (const [packaged, source] of [
-    ["dist/runtime/threads/zopro_zolana.js", "packages/web-prover/src/runtime/threads/zopro_zolana.js"],
-    ["dist/runtime/threads/zopro_zolana_bg.wasm", "packages/web-prover/src/runtime/threads/zopro_zolana_bg.wasm"],
-    ["dist/runtime/single/zopro_zolana.js", "packages/web-prover/src/runtime/single/zopro_zolana.js"],
-    ["dist/runtime/single/zopro_zolana_bg.wasm", "packages/web-prover/src/runtime/single/zopro_zolana_bg.wasm"],
+    ["dist/runtime/threads/zopro_spr.js", "packages/web-prover/src/runtime/threads/zopro_spr.js"],
+    ["dist/runtime/threads/zopro_spr_bg.wasm", "packages/web-prover/src/runtime/threads/zopro_spr_bg.wasm"],
+    ["dist/runtime/single/zopro_spr.js", "packages/web-prover/src/runtime/single/zopro_spr.js"],
+    ["dist/runtime/single/zopro_spr_bg.wasm", "packages/web-prover/src/runtime/single/zopro_spr_bg.wasm"],
     ["dist/scripts/install-keys.mjs", "packages/web-prover/scripts/install-keys.mjs"],
   ]) {
     assert.deepEqual(await readFile(join(installed, packaged)), await readFile(join(root, source)), packaged);
@@ -104,8 +104,8 @@ try {
   );
   // Both bundlers emit each runtime's wasm as a file, not inlined.
   const runtimeSizes = [
-    (await readFile(join(installed, "dist/runtime/threads/zopro_zolana_bg.wasm"))).length,
-    (await readFile(join(installed, "dist/runtime/single/zopro_zolana_bg.wasm"))).length,
+    (await readFile(join(installed, "dist/runtime/threads/zopro_spr_bg.wasm"))).length,
+    (await readFile(join(installed, "dist/runtime/single/zopro_spr_bg.wasm"))).length,
   ].sort((a, b) => a - b);
   for (const outDir of ["dist", "dist-webpack"]) {
     const emitted = [];

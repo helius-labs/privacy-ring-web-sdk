@@ -1,13 +1,13 @@
 /**
- * The prover runtime: zopro-zolana's `web` module as wasm-bindgen emits it
- * (`zopro_zolana.js` beside its wasm), which the package ships in `runtime/`
+ * The prover runtime: zopro-spr's `web` module as wasm-bindgen emits it
+ * (`zopro_spr.js` beside its wasm), which the package ships in `runtime/`
  * beside the compiled worker, built twice: `threads/` with shared memory and a
  * thread pool, for a cross-origin isolated page, and `single/` without, for any
  * other page, where SharedArrayBuffer is missing.
  */
 
-/** A loaded key, `ZolanaProver` in zopro-zolana. */
-export interface ZolanaProver {
+/** A loaded key, `SprProver` in zopro-spr. */
+export interface SprProver {
   name(): string;
   /** The gnark proving key's sha256 the key file was built from, hex. */
   digest(): string;
@@ -43,8 +43,8 @@ export interface Runtime {
   key_vectors(key: Uint8Array): Uint32Array;
   /** A run of a vector's whole compressed points (G2 for the last), decompressed. */
   kernel_points(compressed: Uint8Array, g2: boolean): Uint8Array;
-  ZolanaProver: {
-    new (key: Uint8Array): ZolanaProver;
+  SprProver: {
+    new (key: Uint8Array): SprProver;
     /** A key file whose vectors were decompressed elsewhere, each joined in order. */
     from_vectors(
       key: Uint8Array,
@@ -53,7 +53,7 @@ export interface Runtime {
       k: Uint8Array,
       z: Uint8Array,
       b2: Uint8Array,
-    ): ZolanaProver;
+    ): SprProver;
   };
 }
 
@@ -63,10 +63,10 @@ export interface ThreadedRuntime extends Runtime {
 
 /** The runtime with a thread pool, uninitialized; the app's bundler emits it with its wasm and thread helpers. */
 export async function importThreadedRuntime(): Promise<ThreadedRuntime> {
-  return await import("./runtime/threads/zopro_zolana.js");
+  return await import("./runtime/threads/zopro_spr.js");
 }
 
 /** The runtime without shared memory, uninitialized; the app's bundler emits it with its wasm. */
 export async function importSingleRuntime(): Promise<Runtime> {
-  return await import("./runtime/single/zopro_zolana.js");
+  return await import("./runtime/single/zopro_spr.js");
 }

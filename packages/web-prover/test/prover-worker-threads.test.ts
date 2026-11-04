@@ -7,7 +7,7 @@ const runtime = vi.hoisted(() => ({
   initThreadPool: vi.fn(() => new Promise<void>(() => {})),
   init_gpu: vi.fn(async () => {}),
   raw_format: () => "raw-test",
-  ZolanaProver: class {},
+  SprProver: class {},
 }));
 vi.mock("../src/runtime.js", () => ({
   importThreadedRuntime: async () => runtime,

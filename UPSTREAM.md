@@ -24,7 +24,7 @@ Runtime `keyCatalog` input can change download URLs only for conversions whose
 checksums and sizes match the bundled pins. It neither adds supported circuits
 nor replaces the trusted conversion manifest.
 
-The runtime is zopro-zolana at the revision `runtime.lock.json` pins (`scripts/build-runtime.sh`).
+The runtime is zopro-spr at the revision `runtime.lock.json` pins (`scripts/build-runtime.sh`).
 
 Source mapping:
 

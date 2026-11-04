@@ -7,7 +7,7 @@
  * recognizes the prover URL and answers it from wasm instead of the network.
  * Everything else -- indexer calls, Solana RPC -- falls through untouched.
  *
- * The runtime is zopro-zolana built for the browser: Zolana's request and
+ * The runtime is zopro-spr built for the browser: Zolana's request and
  * proof formats, gnark's keys repacked as zopro key files.
  */
 
