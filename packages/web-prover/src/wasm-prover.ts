@@ -372,7 +372,7 @@ export class WasmProver {
   }
 
   /**
-   * A `fetch` for `ZolanaClientConfig.fetch`. Proof requests to `/prove/<key>`
+   * A `fetch` for `SprClientConfig.fetch`. Proof requests to `/prove/<key>`
    * are answered by the runtime, other paths below `/prove` are refused, and
    * everything else is delegated, so one shim covers the client.
    */

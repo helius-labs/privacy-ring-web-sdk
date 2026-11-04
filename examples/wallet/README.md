@@ -6,7 +6,7 @@ The whole integration is in [`src/zolana.ts`](src/zolana.ts):
 
 ```ts
 const prover = new ZolanaWebProver({ proverUrl }); // the bundler emits the runtime; keys come from the key CDN
-const client = await createZolanaClient({
+const client = await createSprClient({
   solanaRpcUrl, indexerUrl, proverUrl,
   proofDataSource: "client",
   fetch: limitLocalProofs(prover.createFetch(), proverUrl), // refuse more than eight inputs before local proving

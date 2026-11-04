@@ -56,15 +56,15 @@ try {
 
 `proveRequest` takes a `/prove` JSON body and returns proof JSON after local verification. Supports `@heliuslabs/zolana` 0.8.0-alpha transfers and merges of up to 24 notes (`MAX_BROWSER_MERGE_INPUTS`). Each proof includes `provingKeySha256` for the SDK’s key pin check. If a GPU proof fails verification, the same request is retried on the CPU.
 
-### With `@heliuslabs/zolana`
+### With `@heliuslabs/spr`
 
 Supply remote endpoints and a reviewed deployment policy in your app:
 
 ```ts
-import { createZolanaClient } from "@heliuslabs/zolana";
-import { SignedTeePolicy } from "@heliuslabs/zolana/client";
+import { createSprClient } from "@heliuslabs/spr";
+import { SignedTeePolicy } from "@heliuslabs/spr/client";
 
-const remoteClient = await createZolanaClient({
+const remoteClient = await createSprClient({
   solanaRpcUrl,
   indexerUrl,
   proverUrl,

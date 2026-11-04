@@ -6,7 +6,7 @@ Local Zolana Groth16 proving in the browser: [`@heliuslabs/zolana-web-prover`](p
 
 ## Packages
 
-- [`@heliuslabs/zolana-web-prover`](packages/web-prover/README.md) — worker, keys, local prove/verify, and a `fetch` shim for the protocol SDK. Matches `@heliuslabs/zolana` 0.8.0-alpha (merges of up to 24 notes).
+- [`@heliuslabs/zolana-web-prover`](packages/web-prover/README.md) — worker, keys, local prove/verify, and a `fetch` shim for the protocol SDK. Matches `@heliuslabs/spr` 0.8.0-alpha (merges of up to 24 notes).
 - [`examples/wallet`](examples/wallet/README.md) — private wallet on devnet-e (register, shield, send, unshield); start here for an end-to-end flow.
 - `examples/browser` — synthetic-request benchmark and timing harness.
 
