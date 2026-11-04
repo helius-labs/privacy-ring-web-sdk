@@ -5,7 +5,7 @@ A private wallet on devnet-e using SDK 0.8.0-alpha. Transfers and withdrawals ar
 The whole integration is in [`src/zolana.ts`](src/zolana.ts):
 
 ```ts
-const prover = new ZolanaWebProver({ proverUrl }); // the bundler emits the runtime; keys come from the key CDN
+const prover = new SprWebProver({ proverUrl }); // the bundler emits the runtime; keys come from the key CDN
 const client = await createSprClient({
   solanaRpcUrl, indexerUrl, proverUrl,
   proofDataSource: "client",

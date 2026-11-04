@@ -1,12 +1,12 @@
 # Zolana Web SDK
 
-Local Zolana Groth16 proving in the browser: [`@heliuslabs/zolana-web-prover`](packages/web-prover/README.md), a [wallet example](examples/wallet/README.md) that proves every transaction in the page, and a [prover benchmark](examples/browser).
+Local Groth16 proving for Solana Privacy Rings in the browser: [`@heliuslabs/spr-web-prover`](packages/web-prover/README.md), a [wallet example](examples/wallet/README.md) that proves every transaction in the page, and a [prover benchmark](examples/browser).
 
 **Performance.** In Chrome at four threads on an Apple M5 Pro with WebGPU, a warm proof takes about 0.06–0.43 s for 1–24 notes (0.08 s for 2×2). CPU-only is slower (0.28 s for 2×2, 2.6 s for 24×2). The first load of a shape adds key download and decode; later loads use a cached raw form (tens of milliseconds).
 
 ## Packages
 
-- [`@heliuslabs/zolana-web-prover`](packages/web-prover/README.md) — worker, keys, local prove/verify, and a `fetch` shim for the protocol SDK. Matches `@heliuslabs/spr` 0.8.0-alpha (merges of up to 24 notes).
+- [`@heliuslabs/spr-web-prover`](packages/web-prover/README.md) — worker, keys, local prove/verify, and a `fetch` shim for the protocol SDK. Matches `@heliuslabs/spr` 0.9.0-alpha (merges of up to 24 notes).
 - [`examples/wallet`](examples/wallet/README.md) — private wallet on devnet-e (register, shield, send, unshield); start here for an end-to-end flow.
 - `examples/browser` — synthetic-request benchmark and timing harness.
 
@@ -57,9 +57,9 @@ Proof timing and GPU profiling live under `examples/browser/scripts/` (`proof-ti
 ## Use the package
 
 ```ts
-import { ZolanaWebProver } from "@heliuslabs/zolana-web-prover";
+import { SprWebProver } from "@heliuslabs/spr-web-prover";
 
-const prover = new ZolanaWebProver({ proverUrl: "http://localhost:3001" });
+const prover = new SprWebProver({ proverUrl: "http://localhost:3001" });
 const { proof, proveMs, verifyMs } = await prover.proveRequest(requestJson);
 const localFetch = prover.createFetch();
 ```

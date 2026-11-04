@@ -1,6 +1,6 @@
 name: Publish
 
-# Publishes @heliuslabs/zolana-web-prover when a `web-prover-v<version>` tag is
+# Publishes @heliuslabs/spr-web-prover when a `web-prover-v<version>` tag is
 # pushed: the checks and the consumer gate run first, the tag must name the
 # package's version, and npm's trusted publishing authenticates the job, with
 # provenance, so no token is stored. Every release becomes `latest` on npm and
@@ -53,7 +53,7 @@ jobs:
         env:
           CHROME_NO_SANDBOX: "1"
       - name: Publish
-        run: npm publish --workspace @heliuslabs/zolana-web-prover --provenance --access public --tag latest
+        run: npm publish --workspace @heliuslabs/spr-web-prover --provenance --access public --tag latest
       - name: GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -67,7 +67,7 @@ jobs:
             new RegExp(`^## ${escaped}(?: — [^\\n]+)?\\n([\\s\\S]*?)(?=\\n## |$)`, "m"),
           );
           const body = (match?.[1] ?? "").trim();
-          const npm = `https://www.npmjs.com/package/@heliuslabs/zolana-web-prover/v/${version}`;
+          const npm = `https://www.npmjs.com/package/@heliuslabs/spr-web-prover/v/${version}`;
           process.stdout.write(
             body === ""
               ? `Published to npm: ${npm}\n`
@@ -76,6 +76,6 @@ jobs:
           NODE
           )"
           gh release create "$GITHUB_REF_NAME" \
-            --title "@heliuslabs/zolana-web-prover $VERSION" \
+            --title "@heliuslabs/spr-web-prover $VERSION" \
             --notes "$notes" \
             --latest

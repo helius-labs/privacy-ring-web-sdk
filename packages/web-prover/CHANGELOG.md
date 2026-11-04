@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Breaking: the package is published as `@heliuslabs/spr-web-prover`, and `ZolanaWebProver` and the `zolana-prover-keys` command become `SprWebProver` and `spr-prover-keys`. Replace the dependency, imports and install scripts; key caches are kept.
+
 ## 0.6.0-alpha — 2026-11-03
 
 - Match `@heliuslabs/zolana` 0.8.0-alpha and the finalized core ceremony keys. Existing key caches are invalidated by the new key set; self-hosted deployments must install the new keys.

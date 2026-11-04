@@ -25,7 +25,7 @@ export type { WasmProverErrorCode } from "./errors.js";
 
 export {
   WasmProver,
-  WasmProver as ZolanaWebProver,
+  WasmProver as SprWebProver,
   WasmProverError,
   type WasmProverOptions,
   type WorkerRequest,

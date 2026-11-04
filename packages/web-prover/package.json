@@ -1,7 +1,7 @@
 {
-  "name": "@heliuslabs/zolana-web-prover",
+  "name": "@heliuslabs/spr-web-prover",
   "version": "0.6.0-alpha",
-  "description": "Local Zolana Groth16 proving for browsers.",
+  "description": "Local Groth16 proving for Solana Privacy Rings in browsers.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -14,7 +14,7 @@
   ],
   "type": "module",
   "bin": {
-    "zolana-prover-keys": "dist/scripts/install-keys.mjs"
+    "spr-prover-keys": "dist/scripts/install-keys.mjs"
   },
   "exports": {
     ".": {

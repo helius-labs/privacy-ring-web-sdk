@@ -66,7 +66,7 @@ export interface WasmProverOptions {
   /**
    * Where proving keys are fetched from. Omit it to use the pinned key set on
    * the Zolana CDN, which serves them with CORS; set it to self-host or mirror
-   * them, as `zolana-prover-keys` installs.
+   * them, as `spr-prover-keys` installs.
    */
   readonly keyBaseUrl?: string;
   /**

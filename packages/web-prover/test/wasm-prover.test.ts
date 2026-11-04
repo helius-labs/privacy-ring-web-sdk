@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ZolanaWebProver } from "../src/index.js";
+import { SprWebProver } from "../src/index.js";
 import { WasmProver, type WorkerRequest, type WorkerFatal } from "../src/wasm-prover.js";
 import type { KeyProgress, Measurement } from "../src/measurement.js";
 import { TRANSFER_SHAPES } from "../src/shapes.js";
@@ -25,7 +25,7 @@ proverTestHooks();
 describe("prover lifecycle", () => {
   it("starts its bundled worker automatically and exposes the product alias", async () => {
     const { prover } = await fixture();
-    expect(prover).toBeInstanceOf(ZolanaWebProver);
+    expect(prover).toBeInstanceOf(SprWebProver);
     const result = await prover.proveRequest(body);
     expect(result).toEqual({ proof: '{"proof":"test"}', proveMs: 1, verifyMs: 0 });
     expect(TestWorker.instances).toHaveLength(1);

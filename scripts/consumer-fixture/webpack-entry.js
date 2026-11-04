@@ -1,4 +1,4 @@
-import { ZolanaWebProver, WasmProverError } from "@heliuslabs/zolana-web-prover";
+import { SprWebProver, WasmProverError } from "@heliuslabs/spr-web-prover";
 
 // The proofs main.ts makes, from an app webpack bundles.
 window.checkPackedProver = async () => {
@@ -7,7 +7,7 @@ window.checkPackedProver = async () => {
   const results = [];
   const threadCounts = crossOriginIsolated ? [0, 1, 2] : [0];
   for (const threads of threadCounts) {
-    const prover = new ZolanaWebProver({
+    const prover = new SprWebProver({
       keyBaseUrl: "/keys",
       proverUrl: location.origin + "/local",
       threads,

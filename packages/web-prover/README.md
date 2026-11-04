@@ -1,11 +1,11 @@
-# @heliuslabs/zolana-web-prover
+# @heliuslabs/spr-web-prover
 
 Local Groth16 proving in a browser worker. No protocol SDK or Solana dependencies — transaction building stays in your app (see the [wallet example](https://github.com/helius-labs/zolana-web-sdk/tree/main/examples/wallet)).
 
 ## Install
 
 ```sh
-npm install @heliuslabs/zolana-web-prover
+npm install @heliuslabs/spr-web-prover
 ```
 
 Use a bundler that emits `new URL(..., import.meta.url)` assets and nested module workers (Vite and webpack 5 work; plain esbuild/Rollup usually do not). Keys load from the Zolana key CDN on first use and are checked against digests shipped in the package.
@@ -38,9 +38,9 @@ Prove from an extension page (not the service worker). For threaded proving, set
 ## Prove locally
 
 ```ts
-import { ZolanaWebProver, WasmProverError } from "@heliuslabs/zolana-web-prover";
+import { SprWebProver, WasmProverError } from "@heliuslabs/spr-web-prover";
 
-const prover = new ZolanaWebProver({
+const prover = new SprWebProver({
   proverUrl: "http://127.0.0.1:3001",
 });
 
@@ -87,7 +87,7 @@ Pass `prover.createFetch()` as `fetch`, set `proofDataSource: "client"`, and use
 ## Self-host keys
 
 ```sh
-npx --no-install zolana-prover-keys --output public/keys --keys transfer_confidential_1_2.key,transfer_confidential_2_2.key
+npx --no-install spr-prover-keys --output public/keys --keys transfer_confidential_1_2.key,transfer_confidential_2_2.key
 ```
 
 Pass `keyBaseUrl` (for example `"/keys"`). Names must appear in the pinned key set; files install as `<name>.zopro` and are size/SHA-256 checked. For a local mirror, set `ZOLANA_KEYS_BASE_URL` to a `file:///.../` directory.
@@ -100,7 +100,7 @@ Keys are tens to hundreds of MB; a loaded key needs more working memory. Only on
 it through your application's chosen source, or bundle a snapshot:
 
 ```ts
-const prover = new ZolanaWebProver({
+const prover = new SprWebProver({
   proverUrl: "http://127.0.0.1:3001",
   keyCatalog: catalog,
 });
