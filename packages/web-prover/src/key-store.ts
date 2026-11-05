@@ -77,7 +77,8 @@ export class KeyStore {
     const source = options.keySource === undefined ? undefined : sourceKeys(options.keySource);
     this.#sourceKeys = source?.keys;
     this.#cacheName = source === undefined
-      ? `${keyCachePrefix}-${KEY_SET}` : `zolana-runtime-proving-keys-${source.cacheKey}`;
+      ? `${keyCachePrefix}-${KEY_SET}` : `${runtimeKeyCachePrefix}-${source.cacheKey}`;
+    keySetsInUse.add(this.#cacheName);
     this.#catalogUrls = options.keyCatalog === undefined ? undefined : catalogKeyUrls(options.keyCatalog);
   }
 
@@ -205,26 +206,29 @@ export class KeyStore {
   }
 
   /**
-   * Opens this key set's cache, once. The first call also deletes the stores
-   * of other key sets, so a rotation frees its keys at once, and asks for
-   * persistence when the caller opted in.
+   * Opens this key set's cache. After the first open succeeds it deletes the
+   * caches of every other key set, pinned or runtime, that no store in this
+   * page or worker was created with, so a rotation frees the old keys, and asks
+   * for persistence when the caller opted in.
    */
   async #open(signal: AbortSignal): Promise<Cache | undefined> {
     if (this.#cache !== undefined) return this.#cache;
-    if (!this.#prepared) {
+    const cache = await optionalCache(() => globalThis.caches?.open(this.#cacheName), signal);
+    if (cache !== undefined && !this.#prepared) {
       this.#prepared = true;
-      // Another live prover may still be using an earlier runtime generation.
-      const names = this.#sourceKeys === undefined
-        ? await optionalCache(() => globalThis.caches?.keys(), signal) : [];
+      // A store of another tab or worker of the origin keeps working on a
+      // cache deleted under it, as the Cache API keeps open caches usable,
+      // and downloads its keys again in its next page.
+      const names = await optionalCache(() => globalThis.caches?.keys(), signal);
       for (const name of names ?? []) {
-        if (name.startsWith(keyCachePrefix) && name !== this.#cacheName)
+        if (isKeyCache(name) && !keySetsInUse.has(name))
           await optionalCache(() => globalThis.caches?.delete(name), signal);
       }
       if (this.#options.persistStorage === true)
         await optionalCache(() => globalThis.navigator?.storage?.persist(), signal);
     }
-    this.#cache = await optionalCache(() => globalThis.caches?.open(this.#cacheName), signal);
-    return this.#cache;
+    this.#cache = cache;
+    return cache;
   }
 
   /**
@@ -403,8 +407,12 @@ export class KeyStore {
   }
 }
 
-/** The prefix of every key set's store; stores of other key sets are deleted. */
+/** The prefix of every pinned key set's store. */
 const keyCachePrefix = "zolana-proving-keys";
+/** The prefix of every runtime key set's store, named by the set's `cacheKey`. */
+const runtimeKeyCachePrefix = "zolana-runtime-proving-keys";
+/** The stores of key sets this page or worker created a store for: they are never deleted. */
+const keySetsInUse = new Set<string>();
 const rawSourceHeader = "x-zolana-pinned-sha256";
 const rawFormatHeader = "x-zolana-raw-format";
 const rawSizeHeader = "x-zolana-raw-size";
@@ -419,6 +427,11 @@ const keyPartBytes = 8 << 20;
  * time at about 45 (from an edge that holds it, 43 against 76).
  */
 const keyPartsAtOnce = 4;
+
+/** Whether `name` is the store of a key set, pinned or runtime. */
+function isKeyCache(name: string): boolean {
+  return name.startsWith(keyCachePrefix) || name.startsWith(`${runtimeKeyCachePrefix}-`);
+}
 
 /** The Cache API ignores fragments, so the raw entry gets its own query. */
 function rawKeyUrl(url: string): string {

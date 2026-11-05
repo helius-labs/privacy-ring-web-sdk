@@ -4,7 +4,7 @@
 
 - Breaking: the package is published as `@heliuslabs/spr-web-prover`, and `ZolanaWebProver` and the `zolana-prover-keys` command become `SprWebProver` and `spr-prover-keys`. Replace the dependency, imports and install scripts; key caches are kept.
 - `keySource` accepts the authenticated runtime key set from `@heliuslabs/spr` 0.9.0-alpha's `fetchProvingKeySet()`, including new download URLs, sizes and checksums, for compatible transfer and merge circuits.
-- Runtime key sets stay fixed per prover instance and use separate caches; clear obsolete instances with `clearKeys()`.
+- Runtime key sets stay fixed per prover instance and use separate caches. When an instance first opens its cache, it deletes the caches of other key sets, pinned or runtime, that no instance in the same page or worker uses.
 
 ## 0.6.0-alpha — 2026-11-03
 
