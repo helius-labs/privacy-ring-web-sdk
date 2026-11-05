@@ -57,6 +57,15 @@ export type WorkerResponse = Readonly<{
   ms: number;
 }>;
 
+/** A locally proved and verified request, with the runtime's times. */
+export interface ProofResult {
+  /** The proof JSON the prover server returns. */
+  readonly proof: string;
+  readonly witnessMs: number;
+  readonly proveMs: number;
+  readonly verifyMs: number;
+}
+
 export interface WasmProverOptions {
   /**
    * Threads of the proving pool (one or more; omit to choose automatically), or
@@ -84,8 +93,13 @@ export interface WasmProverOptions {
   readonly fetch?: typeof globalThis.fetch;
   /** Override worker construction for tests or a custom bundler. */
   readonly workerFactory?: () => Worker;
-  /** Called for each timed worker operation so the UI can chart it. */
+  /** Called for each timed step, a key's fetch and load and a proof's witness, prove and verify. */
   readonly onMeasurement?: (measurement: Measurement) => void;
+  /**
+   * Called when `createFetch()` answers a proof request with an error, with
+   * the redacted error its 500 carries. `proveRequest` rejects with it instead.
+   */
+  readonly onProofError?: (error: WasmProverError) => void;
   /** Called as each proving key downloads and when the worker starts decoding it. */
   readonly onKeyProgress?: (progress: KeyProgress) => void;
   /**
@@ -384,9 +398,9 @@ export class WasmProver {
     return createProverFetch({
       proverUrl: this.#options.proverUrl,
       fetch: this.#fetch,
-      ...(this.#options.onMeasurement === undefined
+      ...(this.#options.onProofError === undefined
         ? {}
-        : { onMeasurement: this.#options.onMeasurement }),
+        : { onProofError: this.#options.onProofError }),
       prove: (body, signal) => this.proveRequest(body, signal),
     });
   }
@@ -400,7 +414,7 @@ export class WasmProver {
   async proveRequest(
     body: string,
     signal?: AbortSignal,
-  ): Promise<{ proof: string; proveMs: number; verifyMs: number }> {
+  ): Promise<ProofResult> {
     return this.#enqueue(async (active) => {
       const shape = proofRequestShape(body);
       if (shape === undefined) {
@@ -416,20 +430,30 @@ export class WasmProver {
         value === null ||
         !("proof" in value) ||
         typeof value.proof !== "string" ||
+        !("witnessMs" in value) ||
+        typeof value.witnessMs !== "number" ||
+        !("proveMs" in value) ||
+        typeof value.proveMs !== "number" ||
         !("verifyMs" in value) ||
         typeof value.verifyMs !== "number"
       )
         throw new WasmProverError("wasm_invalid_response");
       active.throwIfAborted();
-      this.#options.onMeasurement?.({
-        step: "transfer-prove",
-        ms: response.ms,
-        note:
-          this.#threads === 0
-            ? "zopro proof, single thread; locally verified"
-            : `zopro proof, ${String(this.#threads)} threads; locally verified`,
-      });
-      return { proof: value.proof, proveMs: response.ms - value.verifyMs, verifyMs: value.verifyMs };
+      const result = {
+        proof: value.proof,
+        witnessMs: value.witnessMs,
+        proveMs: value.proveMs,
+        verifyMs: value.verifyMs,
+      };
+      const circuit = shape.keyFile.startsWith("merge_") ? "merge" : "transfer";
+      const note = `${shape.keyFile}, ${this.#threads === 0 ? "single thread" : `${String(this.#threads)} threads`}`;
+      for (const [step, ms] of [
+        ["witness", result.witnessMs],
+        ["prove", result.proveMs],
+        ["verify", result.verifyMs],
+      ] as const)
+        this.#options.onMeasurement?.({ step, ms, circuit, note });
+      return result;
     }, signal);
   }
 

@@ -11,7 +11,7 @@ function line(run, round, total, extra = {}) {
     downloaded_bytes: 0,
     download_ms: 0,
     load_ms: 0,
-    witness_ms: 0,
+    witness_ms: 30,
     prove_ms: 300,
     verify_ms: 2,
     total_ms: total,
@@ -37,6 +37,7 @@ test("the four rows come from the two runs, with medians of the repeats", () => 
   assert.equal(cells["first run after restart"].total_ms, 340);
   assert.equal(cells["repeated after restart"].total_ms, 320);
   assert.equal(current.stages["1x2"].load_ms, 30);
+  assert.equal(current.stages["1x2"].witness_ms, 30);
   assert.equal(current.stages["1x2"].prove_ms, 300);
 });
 
@@ -52,7 +53,7 @@ test("the markdown carries the download bracket and the change against a baselin
   // Verification is not a cost of proving; a two-millisecond change is no percentage.
   assert.doesNotMatch(text, /\| verify/u);
   baseline.stages["1x2"].witness_ms = 2;
-  assert.match(markdown(current, baseline, 15), /\| \| after \| 0\.00 s \|\n/u);
+  assert.match(markdown(current, baseline, 15), /\| witness \| before \| 0\.00 s \|\n\| \| after \| 0\.03 s \|\n/u);
   assert.doesNotMatch(markdown(current, undefined, 15), /%|\| before \||\| after \|/u);
 });
 

@@ -60,7 +60,7 @@ Proof timing and GPU profiling live under `examples/browser/scripts/` (`proof-ti
 import { SprWebProver } from "@heliuslabs/spr-web-prover";
 
 const prover = new SprWebProver({ proverUrl: "http://localhost:3001" });
-const { proof, proveMs, verifyMs } = await prover.proveRequest(requestJson);
+const { proof, witnessMs, proveMs, verifyMs } = await prover.proveRequest(requestJson);
 const localFetch = prover.createFetch();
 ```
 

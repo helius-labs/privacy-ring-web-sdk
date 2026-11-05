@@ -38,7 +38,12 @@ export function App(): React.ReactElement {
     threadMode === "auto" ? automaticThreads : threadMode === "single" ? 0 : Number(customThreads);
   const busy = phase !== "idle" && phase !== "loading";
   const latest = results.at(-1);
-  const provingMs = results.length ? median(results.map((result) => result.proveMs)) : undefined;
+  // What a proof takes, the witness and the Groth16 proof, then each of them.
+  const provingMs = results.length
+    ? median(results.map((result) => result.witnessMs + result.proveMs))
+    : undefined;
+  const witnessMs = results.length ? median(results.map((result) => result.witnessMs)) : undefined;
+  const proofMs = results.length ? median(results.map((result) => result.proveMs)) : undefined;
   const verificationMs = results.length
     ? median(results.map((result) => result.verifyMs))
     : undefined;
@@ -225,6 +230,12 @@ export function App(): React.ReactElement {
               <span>{provingMs === undefined ? "—" : provingMs.toFixed(1)}</span>
               {provingMs !== undefined && <span className="timing-unit">ms</span>}
             </div>
+            {witnessMs !== undefined && proofMs !== undefined && (
+              <p className="timing-split">
+                Witness <span className="witness-time">{witnessMs.toFixed(1)} ms</span> · proof{" "}
+                <span className="prove-time">{proofMs.toFixed(1)} ms</span>
+              </p>
+            )}
           </div>
           <div>
             <p className="result-label">
@@ -392,8 +403,12 @@ export function App(): React.ReactElement {
           </div>
           <dl className="proof-facts">
             <div>
-              <dt>{results.length > 1 ? "Median proving" : "Proving"}</dt>
-              <dd>{provingMs?.toFixed(1)} ms</dd>
+              <dt>{results.length > 1 ? "Median witness" : "Witness"}</dt>
+              <dd>{witnessMs?.toFixed(1)} ms</dd>
+            </div>
+            <div>
+              <dt>{results.length > 1 ? "Median proof" : "Proof"}</dt>
+              <dd>{proofMs?.toFixed(1)} ms</dd>
             </div>
             <div>
               <dt>{results.length > 1 ? "Median verification" : "Verification"}</dt>

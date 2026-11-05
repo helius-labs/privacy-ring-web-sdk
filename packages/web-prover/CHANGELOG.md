@@ -5,6 +5,7 @@
 - Breaking: the package is published as `@heliuslabs/spr-web-prover`, and `ZolanaWebProver` and the `zolana-prover-keys` command become `SprWebProver` and `spr-prover-keys`. Replace the dependency, imports and install scripts; key caches are kept.
 - `keySource` accepts the authenticated runtime key set from `@heliuslabs/spr` 0.9.0-alpha's `fetchProvingKeySet()`, including new download URLs, sizes and checksums, for compatible transfer and merge circuits.
 - Runtime key sets stay fixed per prover instance and use separate caches; clear obsolete instances with `clearKeys()`.
+- Breaking: `onMeasurement` reports each proof as `witness`, `prove` and `verify` steps with the runtime's times and the proof's `circuit` (`transfer` or `merge`), in place of `transfer-prove`. `proveRequest` returns `witnessMs` beside `proveMs` and `verifyMs`, all three the runtime's own. Failed `createFetch()` proof requests go to the new `onProofError` option rather than a measurement.
 
 ## 0.6.0-alpha — 2026-11-03
 

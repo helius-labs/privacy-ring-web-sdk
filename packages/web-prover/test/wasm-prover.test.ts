@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SprWebProver } from "../src/index.js";
-import { WasmProver, type WorkerRequest, type WorkerFatal } from "../src/wasm-prover.js";
+import {
+  WasmProver,
+  WasmProverError,
+  type WorkerRequest,
+  type WorkerFatal,
+} from "../src/wasm-prover.js";
 import type { KeyProgress, Measurement } from "../src/measurement.js";
 import { TRANSFER_SHAPES } from "../src/shapes.js";
 import {
@@ -27,8 +32,36 @@ describe("prover lifecycle", () => {
     const { prover } = await fixture();
     expect(prover).toBeInstanceOf(SprWebProver);
     const result = await prover.proveRequest(body);
-    expect(result).toEqual({ proof: '{"proof":"test"}', proveMs: 1, verifyMs: 0 });
+    expect(result).toEqual({ proof: '{"proof":"test"}', witnessMs: 2, proveMs: 3, verifyMs: 1 });
     expect(TestWorker.instances).toHaveLength(1);
+    prover.terminate();
+  });
+
+  it("reports the runtime's witness, prove and verify times by circuit", async () => {
+    const measurements: Measurement[] = [];
+    const { prover } = await fixture((measurement) => measurements.push(measurement));
+    await prover.proveRequest(body);
+    expect(measurements.filter((m) => m.circuit !== undefined)).toEqual([
+      { step: "witness", ms: 2, circuit: "transfer", note: "transfer_confidential_2_2.key, 2 threads" },
+      { step: "prove", ms: 3, circuit: "transfer", note: "transfer_confidential_2_2.key, 2 threads" },
+      { step: "verify", ms: 1, circuit: "transfer", note: "transfer_confidential_2_2.key, 2 threads" },
+    ]);
+    prover.terminate();
+  });
+
+  it("reports a fetch proof failure as an error, not a measurement", async () => {
+    const measurements: Measurement[] = [];
+    const errors: WasmProverError[] = [];
+    const { prover } = await fixture((measurement) => measurements.push(measurement), {
+      onProofError: (error) => errors.push(error),
+    });
+    const response = await prover.createFetch()(endpoint, {
+      method: "POST",
+      body: JSON.stringify({ circuitType: "transfer-confidential", nInputs: 99, nOutputs: 2 }),
+    });
+    expect(response.status).toBe(500);
+    expect(errors.map((error) => error.code)).toEqual(["wasm_invalid_request"]);
+    expect(measurements).toEqual([]);
     prover.terminate();
   });
 
@@ -309,11 +342,14 @@ describe("witness privacy", () => {
   const sentinel = "review-private-sentinel";
 
   it.each(["init", "loadKey", "prove"] as const)(
-    "redacts raw %s failures in the API, fetch adapter and measurements",
+    "redacts raw %s failures in the API, fetch adapter, measurements and errors",
     async (kind) => {
       const measurements: Measurement[] = [];
+      const errors: WasmProverError[] = [];
       const logging = vi.spyOn(console, "error").mockImplementation(() => {});
-      const { prover } = await fixture((measurement) => measurements.push(measurement));
+      const { prover } = await fixture((measurement) => measurements.push(measurement), {
+        onProofError: (error) => errors.push(error),
+      });
       const reply = TestWorker.prototype.reply;
       vi.spyOn(TestWorker.prototype, "reply").mockImplementation(
         function (this: TestWorker, request) {
@@ -332,6 +368,9 @@ describe("witness privacy", () => {
       expect(responseBody).toMatchObject({ code: expect.stringMatching(/^wasm_/) });
       expect(JSON.stringify(responseBody)).not.toContain(sentinel);
       expect(JSON.stringify(measurements)).not.toContain(sentinel);
+      expect(errors).toHaveLength(1);
+      expect(String(errors[0])).not.toContain(sentinel);
+      expect(errors[0]).not.toHaveProperty("cause");
       expect(logging).not.toHaveBeenCalled();
       prover.terminate();
     },

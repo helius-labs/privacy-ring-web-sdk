@@ -118,6 +118,12 @@ h1 {
   padding-top: 6px;
   letter-spacing: -0.5px;
 }
+.timing-split {
+  color: var(--muted);
+  font-size: 12px;
+  margin: 8px 0 0;
+  font-variant-numeric: tabular-nums;
+}
 .verified {
   color: #26713d;
   font-size: 12px;

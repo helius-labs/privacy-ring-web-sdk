@@ -122,7 +122,7 @@ async function setRequest(json) {
   await driver.findElement(By.css('button[aria-label="Close options"]')).click();
 }
 
-/** One proof: the page's proving and verification times, and the wall clock around them. */
+/** One proof: the page's witness, proof and verification times, and the wall clock around them. */
 async function prove() {
   const started = performance.now();
   await (await button("Generate proof")).click();
@@ -140,9 +140,13 @@ async function prove() {
     10,
   );
   const total = performance.now() - started;
-  const proving = parseFloat(await driver.findElement(By.css(".timing span")).getText());
-  const verify = parseFloat(await driver.findElement(By.css(".verify-time")).getText());
-  return { total, proving, verify };
+  const time = async (selector) => parseFloat(await driver.findElement(By.css(selector)).getText());
+  return {
+    total,
+    witness: await time(".witness-time"),
+    proving: await time(".prove-time"),
+    verify: await time(".verify-time"),
+  };
 }
 
 /** The key preparation the page shows in the proof facts: the first load of a page. */
@@ -165,9 +169,9 @@ async function scenario(run, shape, json, keyBytes) {
   await ready();
   await setRequest(json);
   for (let round = 0; round < roundsOf(shape); round++) {
-    const { total, proving, verify } = await prove();
+    const { total, witness, proving, verify } = await prove();
     const load = round === 0 ? await keyLoadMs() : 0;
-    const rest = Math.max(0, Math.round(total - proving - verify - load));
+    const rest = Math.max(0, Math.round(total - witness - proving - verify - load));
     emit({
       run,
       shape,
@@ -175,7 +179,7 @@ async function scenario(run, shape, json, keyBytes) {
       downloaded_bytes: run === "fresh" && round === 0 ? keyBytes : 0,
       download_ms: round === 0 ? rest : 0,
       load_ms: load,
-      witness_ms: 0,
+      witness_ms: Math.round(witness),
       prove_ms: Math.round(proving),
       verify_ms: Math.round(verify),
       total_ms: Math.round(total),

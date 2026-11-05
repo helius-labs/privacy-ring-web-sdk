@@ -11,7 +11,7 @@ interface Activity {
   readonly label: string;
   status: "running" | "done" | "failed";
   detail?: string;
-  proofs: { ms: number; note?: string }[];
+  proofs: { witnessMs: number; proveMs: number }[];
 }
 
 const sol = (lamports: bigint) => `${formatAmount(lamports, 9)} SOL`;
@@ -43,8 +43,12 @@ export function App(): React.ReactElement {
 
   const onMeasurement = useCallback((measurement: Measurement) => {
     const entry = current.current;
-    if (entry === undefined || measurement.step !== "transfer-prove" || measurement.ms === 0) return;
-    entry.proofs.push({ ms: measurement.ms, ...(measurement.note === undefined ? {} : { note: measurement.note }) });
+    if (entry === undefined) return;
+    // A proof reports its witness, then its proof.
+    const last = entry.proofs.at(-1);
+    if (measurement.step === "witness") entry.proofs.push({ witnessMs: measurement.ms, proveMs: 0 });
+    else if (measurement.step === "prove" && last !== undefined) last.proveMs = measurement.ms;
+    else return;
     setActivity((list) => [...list]);
   }, []);
 
@@ -258,7 +262,7 @@ export function App(): React.ReactElement {
               <span>{entry.label}</span> <span className={entry.status}>{entry.status}</span>
               {entry.proofs.map((proof, index) => (
                 <span key={index} className="proof" data-testid="local-proof">
-                  proved locally in {Math.round(proof.ms)} ms
+                  proved locally in {Math.round(proof.witnessMs + proof.proveMs)} ms
                 </span>
               ))}
               {entry.detail !== undefined && <p className="muted">{entry.detail}</p>}
