@@ -32,7 +32,7 @@ import {
 } from "@solana/kit";
 import { SprWebProver, type Measurement } from "@heliuslabs/spr-web-prover";
 import { deployments, remoteProverConfig } from "./deployments";
-import { limitLocalProofs, localSpendLimit, MERGE_FIRST } from "./local-proving.js";
+import { limitLocalProofs, localProofError, localSpendLimit, MERGE_FIRST } from "./local-proving.js";
 export type { Payment };
 
 const selectedNetwork: string = import.meta.env.VITE_ZOLANA_NETWORK ?? "devnet";
@@ -149,6 +149,15 @@ function checkLocalAmount(wallet: Wallet, amount: bigint): void {
   if (amount > localSpendLimit(balance.utxos)) throw new Error(MERGE_FIRST);
 }
 
+/** A transaction proved in the browser, with the proof guard's refusal as `MERGE_FIRST`. */
+async function provedLocally(transaction: Promise<Transaction>): Promise<Transaction> {
+  try {
+    return await transaction;
+  } catch (error) {
+    throw localProofError(error);
+  }
+}
+
 /** Each action returns the slot it landed in, for the next snapshot to wait for. */
 export const actions = {
   async setMerging(session: Session, enabled: boolean): Promise<bigint> {
@@ -187,27 +196,27 @@ export const actions = {
   async send(session: Session, recipient: Address, amount: bigint): Promise<bigint> {
     const { client, wallet, keys, signer } = session;
     checkLocalAmount(wallet, amount);
-    const transaction = await buildTransferTransaction({ client, wallet, keys, feePayer: signer.address, recipient, amount });
+    const transaction = await provedLocally(buildTransferTransaction({ client, wallet, keys, feePayer: signer.address, recipient, amount }));
     return submit(session, transaction);
   },
   /** One transfer and one proof pay every recipient, each a private output. */
   async pay(session: Session, payments: readonly Payment[]): Promise<bigint> {
     const { client, wallet, keys, signer } = session;
     checkLocalAmount(wallet, payments.reduce((total, payment) => total + payment.amount, 0n));
-    const transaction = await buildMultiTransferTransaction({ client, wallet, keys, feePayer: signer.address, payments });
+    const transaction = await provedLocally(buildMultiTransferTransaction({ client, wallet, keys, feePayer: signer.address, payments }));
     return submit(session, transaction);
   },
   async unshield(session: Session, amount: bigint): Promise<bigint> {
     const { client, wallet, keys, signer } = session;
     checkLocalAmount(wallet, amount);
-    const transaction = await buildWithdrawalTransaction({
+    const transaction = await provedLocally(buildWithdrawalTransaction({
       client,
       wallet,
       keys,
       feePayer: signer.address,
       recipient: signer.address,
       amount,
-    });
+    }));
     return submit(session, transaction);
   },
 };

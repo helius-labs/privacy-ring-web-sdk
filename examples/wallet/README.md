@@ -24,7 +24,7 @@ With an app fee filled in, Send pays the recipient and the fee collector as two 
 
 The page shows what the eight largest notes can cover. **Allow merges** enables merging on chain, then **Merge with TEE** combines up to 24 notes on one tree. The SDK attests the prover and encrypts the request to its enclave. The private balance is preserved; public SOL pays network fees. After the merge, balances, note count and history refresh, and local payments can use the consolidated note. Repeat if more notes need combining. **Disable merging** opts out on chain.
 
-Merges use a separate SDK client and `LocalKeys` bound to its remote proof service. They never pass through the browser prover's fetch interceptor. The proof-request guard in `src/local-proving.ts` enforces the local eight-input limit even if note selection changes.
+Merges use a separate SDK client and `LocalKeys` bound to its remote proof service. They never pass through the browser prover's fetch interceptor. The page checks each local payment against the eight largest notes; if the SDK's note selection still needs more inputs, the proof-request guard in `src/local-proving.ts` answers the proof request with a 422 instead of proving it. The SDK reports that at once as `CLIENT_PROVER_HTTP`, without retries, and the page shows the merge hint for it.
 
 ## Run
 
@@ -64,6 +64,13 @@ npm run test:devnet --workspace @zolana/wallet-example
 Drives the page in Chrome with a fresh key funded with 0.05 devnet SOL: register, create nine notes, refuse a local spend that needs all nine, opt into merging, merge with an attested encrypted TEE request, verify the unchanged balance and reduced note count, and opt out. Transfers, an app-fee payment and a withdrawal must still prove locally. The key returns its remaining public SOL to the funder. Set `ZOLANA_E2E_ACTION_DELAY_MS=4000` to pace actions when testing with a public RPC.
 
 ## Deployment configuration
+
+Until the deployments switch to the v2 TEE policy, merges, `npm run test:deployments`
+and `test:devnet` fail with the pinned SDK on both networks:
+`SignedTeePolicy.forNetwork` reads `tee-policy/<network>.json`, which still serves
+the v1 policy file, and attestation fails with `CLIENT_PROVER_TEE_ATTESTATION`
+(`policy_malformed`). The v2 file is served only for devnet-e staging, at
+`tee-policy/v2/devnet.json`. Local transfers do not use the policy.
 
 `src/deployments.ts` is example configuration, independent of the prover package.
 It uses `SignedTeePolicy.forNetwork` for the selected network. The SDK verifies

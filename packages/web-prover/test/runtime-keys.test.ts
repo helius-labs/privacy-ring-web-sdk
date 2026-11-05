@@ -58,10 +58,50 @@ it("snapshots metadata and rejects missing keys or conflicting options before HT
   expect(fetch).not.toHaveBeenCalled();
 });
 
-it("keeps generations in separate caches and only clears the selected generation", async () => {
-  const cache = { match: vi.fn(async () => undefined) };
-  const caches = { open: vi.fn(async () => cache), keys: vi.fn(async () => []), delete: vi.fn(async () => true) };
+function storage(names: readonly string[], open: () => Promise<unknown> = async () => ({ match: vi.fn(async () => undefined) })) {
+  const caches = { open: vi.fn(open), keys: vi.fn(async () => names), delete: vi.fn(async (_name: string) => true) };
   vi.stubGlobal("caches", caches);
+  return caches;
+}
+
+it("deletes the caches of other key sets once its own opens", async () => {
+  const current = `zolana-runtime-proving-keys-${"01".repeat(32)}`;
+  const caches = storage([
+    current,
+    `zolana-runtime-proving-keys-${"02".repeat(32)}`,
+    `zolana-runtime-proving-keys-${"03".repeat(32)}`,
+    "zolana-proving-keys-0123456789abcdef",
+    "app-assets",
+  ]);
+  const store = new KeyStore({ keySource: source("01".repeat(32)), fetch });
+  const signal = new AbortController().signal;
+  await store.status(signal);
+  await store.status(signal);
+  expect(caches.open.mock.calls).toEqual([[current]]);
+  expect(caches.delete.mock.calls.map(([name]) => name)).toEqual([
+    `zolana-runtime-proving-keys-${"02".repeat(32)}`,
+    `zolana-runtime-proving-keys-${"03".repeat(32)}`,
+    "zolana-proving-keys-0123456789abcdef",
+  ]);
+});
+
+it("deletes nothing when its own cache does not open", async () => {
+  const caches = storage(["zolana-proving-keys-0123456789abcdef", `zolana-runtime-proving-keys-${"02".repeat(32)}`], async () => {
+    throw new DOMException("quota", "QuotaExceededError");
+  });
+  const signal = new AbortController().signal;
+  await new KeyStore({ fetch }).status(signal);
+  await new KeyStore({ keySource: source("04".repeat(32)), fetch }).status(signal);
+  expect(caches.delete).not.toHaveBeenCalled();
+});
+
+it("keeps the key sets of every store in the page and clears only the selected one", async () => {
+  const stale = `zolana-runtime-proving-keys-${"05".repeat(32)}`;
+  const caches = storage([
+    `zolana-runtime-proving-keys-${"ab".repeat(32)}`,
+    `zolana-runtime-proving-keys-${"ef".repeat(32)}`,
+    stale,
+  ]);
   const first = new KeyStore({ keySource: source(), fetch });
   const second = new KeyStore({ keySource: source("ef".repeat(32)), fetch });
   const signal = new AbortController().signal;
@@ -71,7 +111,8 @@ it("keeps generations in separate caches and only clears the selected generation
     [`zolana-runtime-proving-keys-${"ab".repeat(32)}`],
     [`zolana-runtime-proving-keys-${"ef".repeat(32)}`],
   ]);
-  expect(caches.delete).not.toHaveBeenCalled();
+  expect(caches.delete.mock.calls).toEqual([[stale], [stale]]);
+  caches.delete.mockClear();
   await second.clear(signal);
   expect(caches.delete).toHaveBeenCalledExactlyOnceWith(`zolana-runtime-proving-keys-${"ef".repeat(32)}`);
 });

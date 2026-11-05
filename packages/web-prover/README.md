@@ -146,8 +146,12 @@ const client = new SprClient({
 The prover must serve the runtime metadata and match the on-chain verifier.
 One instance keeps one snapshot; download a fresh set and create new instances
 between runs. Downloads, sizes, checksums and worker key identities come from
-that snapshot. Runtime generations have separate caches and do not delete each
-other; use `clearKeys()` on an obsolete instance to reclaim its files.
+that snapshot. Each key set has its own cache. When an instance first opens
+its cache (its first proof, `prefetch()` or `provingKeys()`), it deletes the
+caches of every other key set, pinned or runtime, except those of instances
+created in the same page or worker, so a rotation frees the previous set's
+files. An instance in another tab of the origin that still uses a deleted set
+keeps working and downloads its keys again in its next page.
 Use `prover.provingKeys()` for current file sizes; `ShapeKey.keyBytes` describes
 the bundled key set.
 

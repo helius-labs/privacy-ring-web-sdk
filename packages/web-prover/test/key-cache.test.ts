@@ -277,6 +277,7 @@ describe("key cache per key set", () => {
       "zolana-proving-keys",
       `zolana-proving-keys-${KEY_SET}`,
       "zolana-proving-keys-0123456789abcdef",
+      `zolana-runtime-proving-keys-${"ab".repeat(32)}`,
       "app-assets",
     ]);
     const { prover } = await fixture();
@@ -289,6 +290,7 @@ describe("key cache per key set", () => {
     expect(caches.delete.mock.calls.map(([name]) => name)).toEqual([
       "zolana-proving-keys",
       "zolana-proving-keys-0123456789abcdef",
+      `zolana-runtime-proving-keys-${"ab".repeat(32)}`,
     ]);
     prover.terminate();
   });
