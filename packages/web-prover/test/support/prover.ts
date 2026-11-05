@@ -48,7 +48,7 @@ export class TestWorker extends EventTarget {
         value = { key: request.fileName, raw: request.exportRaw ? rawKey.slice() : undefined };
         break;
       case "prove":
-        value = { proof: '{"proof":"test"}', witnessMs: 0, proveMs: 0, verifyMs: 0 };
+        value = { proof: '{"proof":"test"}', witnessMs: 2, proveMs: 3, verifyMs: 1 };
         break;
       case "loadedKeys":
         value = { keys: [] };

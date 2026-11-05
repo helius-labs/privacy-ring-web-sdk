@@ -6,7 +6,6 @@
 
 import { abortable, rethrowAbort } from "./abortable.js";
 import { WasmProverError } from "./errors.js";
-import type { Measurement } from "./measurement.js";
 import { isWideMerge, proofRequestShape, proveRoute } from "./proof-requests.js";
 
 export interface ProverFetchOptions {
@@ -14,7 +13,8 @@ export interface ProverFetchOptions {
   readonly proverUrl: string;
   /** Where every other request goes. */
   readonly fetch: typeof globalThis.fetch;
-  readonly onMeasurement?: (measurement: Measurement) => void;
+  /** Called with the redacted error of each proof request answered with a 500. */
+  readonly onProofError?: (error: WasmProverError) => void;
   /** Proves one `/prove` body locally. */
   readonly prove: (body: string, signal?: AbortSignal) => Promise<Readonly<{ proof: string }>>;
 }
@@ -49,7 +49,7 @@ export function createProverFetch(options: ProverFetchOptions): typeof globalThi
       });
     } catch (error) {
       rethrowAbort(error, signal);
-      return proverErrorResponse(error, options.onMeasurement);
+      return proverErrorResponse(error, options.onProofError);
     }
   };
 }
@@ -76,10 +76,10 @@ async function readBody(input: RequestInfo | URL, init?: RequestInit): Promise<s
  */
 function proverErrorResponse(
   error: unknown,
-  onMeasurement?: (measurement: Measurement) => void,
+  onProofError?: (error: WasmProverError) => void,
 ): Response {
   const safe = new WasmProverError(error instanceof WasmProverError ? error.code : undefined);
-  onMeasurement?.({ step: "transfer-prove", ms: 0, note: safe.code });
+  onProofError?.(safe);
   return new Response(JSON.stringify({ code: safe.code, message: safe.message }), {
     status: 500,
     headers: { "content-type": "application/json" },

@@ -46,7 +46,7 @@ const prover = new SprWebProver({
 
 try {
   const requestJson = await (await fetch("/fixtures/transfer-2x2.json")).text();
-  const { proof, proveMs, verifyMs } = await prover.proveRequest(requestJson);
+  const { proof, witnessMs, proveMs, verifyMs } = await prover.proveRequest(requestJson);
 } catch (error) {
   if (error instanceof WasmProverError) console.error(error.code);
 } finally {
@@ -54,7 +54,7 @@ try {
 }
 ```
 
-`proveRequest` takes a `/prove` JSON body and returns proof JSON after local verification. Supports `@heliuslabs/spr` 0.9.0-alpha transfers and merges of up to 24 notes (`MAX_BROWSER_MERGE_INPUTS`). Each proof includes `provingKeySha256` for the SDK’s key pin check. If a GPU proof fails verification, the same request is retried on the CPU.
+`proveRequest` takes a `/prove` JSON body and returns proof JSON after local verification. Supports `@heliuslabs/spr` 0.9.0-alpha transfers and merges of up to 24 notes (`MAX_BROWSER_MERGE_INPUTS`). Each proof includes `provingKeySha256` for the SDK’s key pin check. If a GPU proof fails verification, the same request is retried on the CPU. `witnessMs`, `proveMs` and `verifyMs` are the runtime's own times for the witness, the Groth16 proof and its verification.
 
 ### With `@heliuslabs/spr`
 
@@ -174,3 +174,4 @@ await prover.prefetch({
 - `AbortSignal` cancels queued work; cancelling in-flight work tears down the runtime (it can restart via the retained factory).
 - `terminate()` stops the worker and disables auto-restart.
 - Failures surface as `WasmProverError` with a stable `code` (no witness or backend detail in the message).
+- `onMeasurement` reports `key-fetch` and `key-load` per key and `witness`, `prove` and `verify` per proof, with its `circuit` (`transfer` or `merge`). `onProofError` receives the `WasmProverError` of each `createFetch()` proof request answered with a 500.

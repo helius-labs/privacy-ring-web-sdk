@@ -27,6 +27,7 @@ export {
   WasmProver,
   WasmProver as SprWebProver,
   WasmProverError,
+  type ProofResult,
   type WasmProverOptions,
   type WorkerRequest,
   type WorkerResponse,

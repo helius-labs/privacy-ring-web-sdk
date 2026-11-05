@@ -11,6 +11,7 @@ window.checkPackedProver = async () => {
   const request = await (await fetch("/fixtures/transfer-2x2.json")).json();
   const sentinel = "review-private-sentinel";
   const measurements: Measurement[] = [];
+  const errors: WasmProverError[] = [];
   const results: unknown[] = [];
   // Isolated pages exercise the pool and the single-thread fallback; others only
   // the fallback (threaded init refuses without SharedArrayBuffer).
@@ -21,6 +22,7 @@ window.checkPackedProver = async () => {
       proverUrl: location.origin + "/local",
       threads,
       onMeasurement: (measurement) => measurements.push(measurement),
+      onProofError: (error) => errors.push(error),
     });
     try {
       for (const value of [sentinel, { [sentinel]: sentinel }]) {
@@ -57,11 +59,13 @@ window.checkPackedProver = async () => {
       if (!Array.isArray(proof.ar) || !Array.isArray(proof.bs) || !Array.isArray(proof.krs)) {
         throw new Error("Invalid protocol proof encoding");
       }
-      results.push({ threads, proveMs: result.proveMs, verifyMs: result.verifyMs });
+      results.push({ threads, witnessMs: result.witnessMs, proveMs: result.proveMs, verifyMs: result.verifyMs });
     } finally {
       prover.terminate();
     }
   }
   if (JSON.stringify(measurements).includes(sentinel)) throw new Error("Unsafe measurement");
+  if (errors.length === 0 || errors.some((error) => error.code !== "wasm_prove_failed" || error.message.includes(sentinel)))
+    throw new Error("Unsafe or missing proof error");
   return results;
 };
