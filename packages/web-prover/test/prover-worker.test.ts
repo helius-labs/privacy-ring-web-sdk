@@ -166,6 +166,32 @@ it("proves again on the CPU when a GPU proof does not verify", async () => {
   expect(prover.prove).toHaveBeenCalledTimes(2);
 });
 
+it("proves again on the CPU when the GPU's work fails", async () => {
+  await loadKey();
+  prover.has_gpu.mockReturnValue(true);
+  prover.prove.mockRejectedValueOnce(new Error("the GPU failed: JsValue(OperationError)"));
+  const response = await send({ id: 3, kind: "prove", body: "{}" });
+  expect(response.ok).toBe(true);
+  expect(prover.drop_gpu).toHaveBeenCalledOnce();
+  expect(prover.prove).toHaveBeenCalledTimes(2);
+});
+
+it.each([
+  ["throws", "a malformed request"],
+  ["rejects", "the GPU could not start"],
+])("keeps the GPU when the runtime %s for the request (%s)", async (how, message) => {
+  await loadKey();
+  prover.has_gpu.mockReturnValue(true);
+  prover.prove.mockImplementationOnce(() => {
+    if (how === "throws") throw new Error(message);
+    return Promise.reject(new Error(message));
+  });
+  const response = await send({ id: 3, kind: "prove", body: "{}" });
+  expect(response).toMatchObject({ ok: false, error: "wasm_prove_failed" });
+  expect(prover.drop_gpu).not.toHaveBeenCalled();
+  expect(prover.prove).toHaveBeenCalledOnce();
+});
+
 it("fails a CPU proof that does not verify", async () => {
   await loadKey();
   prover.prove.mockRejectedValue("unverified");

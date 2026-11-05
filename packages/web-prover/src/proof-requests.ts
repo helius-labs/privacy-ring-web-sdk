@@ -13,11 +13,14 @@ export type ProveRoute =
   | Readonly<{ kind: "prove"; keyFile?: string }>
   | Readonly<{ kind: "unsupported" }>;
 
-/** How `url` addresses the prover at `proverUrl`; undefined if it is not a proving route. */
+/**
+ * How `url` addresses the prover at `proverUrl`; undefined if it is not a
+ * proving route. `localhost`, `127.0.0.1` and `[::1]` name the same prover.
+ */
 export function proveRoute(url: URL, proverUrl: string): ProveRoute | undefined {
   const endpoint = new URL(proverUrl);
   const prove = `${endpoint.pathname.replace(/\/+$/u, "")}/prove`;
-  if (url.origin !== endpoint.origin) return undefined;
+  if (!sameOrigin(url, endpoint)) return undefined;
   if (url.pathname === prove) return { kind: "prove" };
   if (!url.pathname.startsWith(`${prove}/`)) return undefined;
   // A key segment is a key file name without `.key`, which always ends in its
@@ -26,6 +29,33 @@ export function proveRoute(url: URL, proverUrl: string): ProveRoute | undefined 
   return /^[a-z0-9_-]+_\d+_\d+$/u.test(key)
     ? { kind: "prove", keyFile: `${key}.key` }
     : { kind: "unsupported" };
+}
+
+const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+function sameOrigin(url: URL, endpoint: URL): boolean {
+  if (url.origin === endpoint.origin) return true;
+  return (
+    url.protocol === endpoint.protocol &&
+    url.port === endpoint.port &&
+    loopbackHosts.has(url.hostname) &&
+    loopbackHosts.has(endpoint.hostname)
+  );
+}
+
+/** Whether `url`'s path has a `prove` segment, as every prover's proof paths do. */
+export function isProvePath(url: URL): boolean {
+  return /(?:^|\/)prove(?:\/|$)/u.test(url.pathname);
+}
+
+/** Whether `body` is a proof request, a JSON object naming a circuit: its witness is secret. */
+export function isProofRequest(body: string): boolean {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    return typeof parsed === "object" && parsed !== null && "circuitType" in parsed;
+  } catch {
+    return false;
+  }
 }
 
 /** Observe only public circuit metadata; never retain the witness body. */

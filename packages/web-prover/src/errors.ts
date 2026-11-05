@@ -8,6 +8,7 @@ const messages = {
   wasm_invalid_response: "Invalid prover response",
   wasm_invalid_request: "Unsupported circuit or malformed request",
   wasm_merge_too_wide: "The browser merges at most 24 notes",
+  wasm_prover_url_mismatch: "Proof request for a URL other than the prover's proverUrl",
   wasm_key_manifest_error: "The proving key is not in the pinned key set",
   wasm_key_catalog_invalid: "Invalid proving-key catalog or conflicting key source configuration",
   wasm_key_download_failed: "Proving-key download failed",
