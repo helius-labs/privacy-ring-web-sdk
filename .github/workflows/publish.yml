@@ -27,13 +27,15 @@ jobs:
           node-version: 24
           cache: npm
           registry-url: https://registry.npmjs.org
-      # The prover runtime builds from the zopro revision runtime.lock.json pins.
+      # The prover runtime builds with the toolchain runtime.lock.json pins.
+      - id: runtime
+        run: jq -r '"toolchain=\(.rustToolchain)", "wasm_bindgen=\(.wasmBindgen)"' runtime.lock.json >> "$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-11-15
+          toolchain: ${{ steps.runtime.outputs.toolchain }}
           targets: wasm32-unknown-unknown
           components: rust-src
-      - run: cargo install wasm-bindgen-cli --version 0.2.128 --locked
+      - run: cargo install wasm-bindgen-cli --version "${{ steps.runtime.outputs.wasm_bindgen }}" --locked
       - name: The tag names the package's version
         run: |
           version="$(node -p 'require("./packages/web-prover/package.json").version')"

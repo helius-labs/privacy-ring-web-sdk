@@ -6,13 +6,13 @@ Local Groth16 proving for Solana Privacy Rings in the browser: [`@heliuslabs/spr
 
 ## Packages
 
-- [`@heliuslabs/spr-web-prover`](packages/web-prover/README.md) — worker, keys, local prove/verify, and a `fetch` shim for the protocol SDK. Matches `@heliuslabs/spr` 0.9.0-alpha (merges of up to 24 notes).
+- [`@heliuslabs/spr-web-prover`](packages/web-prover/README.md) — worker, keys, local prove/verify, and a `fetch` shim for the protocol SDK. Matches the `@heliuslabs/spr` release [`upstream.lock.json`](upstream.lock.json) pins (merges of up to 24 notes).
 - [`examples/wallet`](examples/wallet/README.md) — private wallet on devnet-e (register, shield, send, unshield); start here for an end-to-end flow.
 - `examples/browser` — synthetic-request benchmark and timing harness.
 
-The protocol pin is **v0.8.0-alpha**,
-`c4062d3860965855e47268f61b01a27e774096eb`. Applications supply their RPC,
-indexer and remote prover URLs and reviewed TEE policy. Deployment configuration
+[`upstream.lock.json`](upstream.lock.json) pins the protocol release (see
+[UPSTREAM.md](UPSTREAM.md)). Applications supply their RPC, indexer and remote
+prover URLs and reviewed TEE policy. Deployment configuration
 lives in the [wallet example](examples/wallet/src/deployments.ts), which selects
 `SignedTeePolicy.forNetwork("devnet" | "mainnet")` from the protocol SDK. The prover
 package does not select remote deployments or policies.
@@ -31,7 +31,7 @@ npm run dev         # benchmark
 npm run dev:wallet  # after setup in examples/wallet/README.md
 ```
 
-`npm run setup` builds the prover (needs Rust `nightly-2025-11-15` with `wasm32-unknown-unknown` and `rust-src`, plus wasm-bindgen 0.2.128) and installs the demo 2×2 key. Apps that only `npm install` the published package need a bundler, not Rust.
+`npm run setup` builds the prover (needs the Rust toolchain [`runtime.lock.json`](runtime.lock.json) pins, with `wasm32-unknown-unknown` and `rust-src`, plus the wasm-bindgen CLI version it pins) and installs the demo 2×2 key. Apps that only `npm install` the published package need a bundler, not Rust.
 
 Threaded proving needs cross-origin isolation (the demo Vite server sends COOP/COEP). Use `threads: 0` when isolation is unavailable.
 

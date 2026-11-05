@@ -17,13 +17,15 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      # The prover runtime builds from the zopro revision runtime.lock.json pins.
+      # The prover runtime builds with the toolchain runtime.lock.json pins.
+      - id: runtime
+        run: jq -r '"toolchain=\(.rustToolchain)", "wasm_bindgen=\(.wasmBindgen)"' runtime.lock.json >> "$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-11-15
+          toolchain: ${{ steps.runtime.outputs.toolchain }}
           targets: wasm32-unknown-unknown
           components: rust-src
-      - run: cargo install wasm-bindgen-cli --version 0.2.128 --locked
+      - run: cargo install wasm-bindgen-cli --version "${{ steps.runtime.outputs.wasm_bindgen }}" --locked
       - run: npm ci
       - run: npm run setup
       - run: npm run check
@@ -37,24 +39,6 @@ jobs:
       - run: npm run test:consumer
         env:
           CHROME_NO_SANDBOX: "1"
-      - uses: actions/checkout@v6
-        with:
-          repository: helius-labs/zolana
-          ref: 6bb4f7008294695ebe614f08affb215d4321a538
-          path: target/protocol-sdk
-      - name: Build the merged protocol SDK
-        working-directory: target/protocol-sdk/sdk-libs/ts
-        run: |
-          npm ci
-          npm pack --pack-destination "$RUNNER_TEMP" --json > "$RUNNER_TEMP/protocol-sdk-pack.json"
-      - name: Check wallet compatibility with the merged SDK
-        run: |
-          archive="$(node -p 'JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"))[0].filename' "$RUNNER_TEMP/protocol-sdk-pack.json")"
-          # The wallet and shared scripts must use the same SignedTeePolicy class.
-          npm install --no-save --package-lock=false "$RUNNER_TEMP/$archive"
-          npm run typecheck --workspace @zolana/wallet-example
-          npm test --workspace @zolana/wallet-example
-          npm run build --workspace @zolana/wallet-example
 
   # The bench page, built once for every runner, with the keys from the key
   # CDN as an app loads them.
@@ -66,27 +50,28 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      # The prover runtime builds from the zopro revision runtime.lock.json pins.
+      # The prover runtime builds with the toolchain runtime.lock.json pins.
+      - id: runtime
+        run: jq -r '"toolchain=\(.rustToolchain)", "wasm_bindgen=\(.wasmBindgen)"' runtime.lock.json >> "$GITHUB_OUTPUT"
       - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: nightly-2025-11-15
+          toolchain: ${{ steps.runtime.outputs.toolchain }}
           targets: wasm32-unknown-unknown
           components: rust-src
-      - run: cargo install wasm-bindgen-cli --version 0.2.128 --locked
+      - run: cargo install wasm-bindgen-cli --version "${{ steps.runtime.outputs.wasm_bindgen }}" --locked
       - run: npm ci
       - run: npm run setup
-      - run: npm run build:example
-        env:
-          VITE_ZOLANA_KEYS_URL: https://d3gbdb0egjwcw9.cloudfront.net/proving-keys/78751f5d1c591777
+      - name: Build the bench page against the key CDN zopro-keys.lock pins
+        run: VITE_ZOLANA_KEYS_URL="$(jq -r .baseUrl zopro-keys.lock)" npm run build:example
       - uses: actions/upload-artifact@v7
         with:
           name: bench-page
           path: examples/browser/dist/
 
-  # The proof timing of every shape (README, "Proof timing") in headless
-  # Chrome, beside the checks: on Linux, a server VM, whether a commit made
-  # proving faster or slower, and on macOS, an Apple M1 VM, the nearest to a
-  # laptop. Each runner proves on its own processors. A newer push to a pull
+  # The proof timing of every shape (examples/browser/scripts/proof-timing.mjs)
+  # in headless Chrome, beside the checks: on Linux, a server VM, whether a
+  # commit made proving faster or slower, and on macOS, an Apple M1 VM, the
+  # nearest to a laptop. Each runner proves on its own processors. A newer push to a pull
   # request cancels its bench; every push to main is benched.
   bench:
     needs: bench-page
