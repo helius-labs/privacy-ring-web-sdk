@@ -7,6 +7,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { burnerStorageKey } from "../src/burner.ts";
+import { genesisHashes } from "../src/deployments.ts";
 import {
   appendTransactionMessageInstruction,
   createKeyPairSignerFromBytes,
@@ -35,7 +36,7 @@ if (rpcUrl === undefined || funderPath === undefined) {
 }
 const rpc = createSolanaRpc(rpcUrl);
 if (process.env["VITE_ZOLANA_NETWORK"] === "mainnet" ||
-    await rpc.getGenesisHash().send() !== "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG") {
+    await rpc.getGenesisHash().send() !== genesisHashes.devnet) {
   throw new Error("This transaction test requires Solana devnet and the devnet-e deployment");
 }
 const redact = (text: string) => text.replaceAll(rpcUrl, "<rpc>");

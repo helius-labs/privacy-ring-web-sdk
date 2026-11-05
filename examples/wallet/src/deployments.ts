@@ -19,3 +19,9 @@ export const deployments = {
     proverTee: SignedTeePolicy.forNetwork("mainnet"),
   },
 } as const;
+
+/** The genesis hash of the Solana cluster each deployment runs on. */
+export const genesisHashes = {
+  devnet: "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  mainnet: "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+} as const;

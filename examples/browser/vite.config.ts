@@ -8,9 +8,6 @@ const isolationHeaders = {
 
 export default defineConfig({
   plugins: [react()],
-  // The SDK and the Poseidon hasher both use top-level await, so the output
-  // target has to permit it. Vite 8 transforms through rolldown/oxc, which reads
-  // this single target rather than the esbuild options earlier versions used.
   build: { target: "esnext" },
   worker: { format: "es" },
   server: {
@@ -21,7 +18,4 @@ export default defineConfig({
     headers: isolationHeaders,
   },
   preview: { host: "127.0.0.1", headers: isolationHeaders },
-  // Proving keys are served from public/keys in local development so the browser
-  // fetches them same-origin, with no CORS configuration on the key host.
-  publicDir: "public",
 });

@@ -10,8 +10,7 @@
     "build": "tsc -p tsconfig.json --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:browser": "node scripts/test-browser.mjs",
-    "test": "vitest run"
+    "test:browser": "node scripts/test-browser.mjs"
   },
   "dependencies": {
     "@heliuslabs/spr-web-prover": "^0.7.0-alpha",
@@ -24,7 +23,6 @@
     "@vitejs/plugin-react": "^5.0.0",
     "selenium-webdriver": "^4.27.0",
     "typescript": "^7.0.2",
-    "vite": "^8.1.5",
-    "vitest": "^4.1.10"
+    "vite": "^8.1.5"
   }
 }
