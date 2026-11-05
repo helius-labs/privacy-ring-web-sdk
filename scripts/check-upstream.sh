@@ -57,20 +57,20 @@ rm -f "$upstream_keys"
 # The wallet example's SDK is the pinned release, and it expects the gnark keys
 # ours are built from. Until that release is on npm the example keeps the
 # version npm has, and its installed SDK is not checked against our keys.
-pinned="$(json "$root/examples/wallet/package.json" dependencies | python3 -c 'import ast, sys; print(ast.literal_eval(sys.stdin.read())["@heliuslabs/zolana"])')"
+pinned="$(json "$root/examples/wallet/package.json" dependencies | python3 -c 'import ast, sys; print(ast.literal_eval(sys.stdin.read())["@heliuslabs/spr"])')"
 if [[ "$pinned" != "$sdk" ]]; then
-  if ! published="$(npm view @heliuslabs/zolana versions --json)"; then
-    fail "cannot list @heliuslabs/zolana's versions on npm"
+  if ! published="$(npm view @heliuslabs/spr versions --json)"; then
+    fail "cannot list @heliuslabs/spr's versions on npm"
   elif python3 -c 'import json, sys; sys.exit(0 if sys.argv[1] in json.loads(sys.argv[2]) else 1)' "$sdk" "$published"; then
-    fail "examples/wallet pins @heliuslabs/zolana $pinned, upstream.lock.json says $sdk, which is on npm"
+    fail "examples/wallet pins @heliuslabs/spr $pinned, upstream.lock.json says $sdk, which is on npm"
   else
-    echo "note: examples/wallet stays on @heliuslabs/zolana $pinned until $sdk is on npm; its installed SDK is not checked against the keys" >&2
+    echo "note: examples/wallet stays on @heliuslabs/spr $pinned until $sdk is on npm; its installed SDK is not checked against the keys" >&2
   fi
 fi
-installed="$root/node_modules/@heliuslabs/zolana"
+installed="$root/node_modules/@heliuslabs/spr"
 if [[ "$pinned" == "$sdk" && -d "$installed" ]]; then
   got="$(json "$installed/package.json" version)"
-  [[ "$got" == "$sdk" ]] || fail "installed @heliuslabs/zolana is $got, upstream.lock.json says $sdk"
+  [[ "$got" == "$sdk" ]] || fail "installed @heliuslabs/spr is $got, upstream.lock.json says $sdk"
   node --input-type=module - "$installed/dist/interface/proving-keys.js" "$root/zopro-keys.lock" <<'JS' || failed=1
 import { readFileSync } from "node:fs";
 const [file, lock] = process.argv.slice(2);
@@ -93,7 +93,7 @@ if [[ "$failed" -ne 0 ]]; then
   exit 1
 fi
 if [[ "$pinned" != "$sdk" ]]; then
-  echo "zopro keys and pins match zolana $tag ($revision); examples/wallet waits for @heliuslabs/zolana $sdk on npm"
+  echo "zopro keys and pins match zolana $tag ($revision); examples/wallet waits for @heliuslabs/spr $sdk on npm"
 else
-  echo "zopro keys and pins match zolana $tag ($revision) and @heliuslabs/zolana $sdk"
+  echo "zopro keys and pins match zolana $tag ($revision) and @heliuslabs/spr $sdk"
 fi

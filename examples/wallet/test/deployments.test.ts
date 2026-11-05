@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { SHIELDED_POOL_PROGRAM_ID, USER_REGISTRY_PROGRAM_ID } from "@heliuslabs/zolana/interface";
-import { SignedTeePolicy, teePolicyFromJson } from "@heliuslabs/zolana/client";
+import { SHIELDED_POOL_PROGRAM_ID, USER_REGISTRY_PROGRAM_ID } from "@heliuslabs/spr/interface";
+import { SignedTeePolicy, teePolicyFromJson } from "@heliuslabs/spr/client";
 import { ZOLANA_PROGRAM_IDS } from "../../../packages/web-prover/src/protocol.ts";
 import { deployments, remoteProverConfig } from "../src/deployments.ts";
 import { burnerStorageKey, loadBurnerSeed, resetBurner } from "../src/burner.ts";

@@ -53,7 +53,7 @@ try {
   for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
     assert.deepEqual(Object.keys(manifest[field] || {}), [], `Unexpected ${field}`);
   }
-  for (const dependency of ["@heliuslabs/zolana", "@solana/kit"]) {
+  for (const dependency of ["@heliuslabs/spr", "@solana/kit"]) {
     await assert.rejects(lstat(join(consumer, "node_modules", dependency)), { code: "ENOENT" });
   }
   await command(join(consumer, "node_modules/.bin/tsc"), ["-p", "tsconfig.json"], consumer);

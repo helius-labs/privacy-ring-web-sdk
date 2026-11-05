@@ -1,6 +1,6 @@
 // Live read-only checks. No wallet, signer or transaction submission is used.
 import assert from "node:assert/strict";
-import { createZolanaClient } from "@heliuslabs/zolana";
+import { createSprClient } from "@heliuslabs/spr";
 import { address } from "@solana/kit";
 import { ZOLANA_PROGRAM_IDS } from "../packages/web-prover/src/protocol.ts";
 import { deployments } from "../examples/wallet/src/deployments.ts";
@@ -13,7 +13,7 @@ const genesis = {
 for (const network of ["devnet", "mainnet"] as const) {
   try {
     const deployment = deployments[network];
-    const client = await createZolanaClient({
+    const client = await createSprClient({
       ...deployment,
       solanaRpcUrl: process.env[`ZOLANA_${network.toUpperCase()}_RPC_URL`] ?? deployment.solanaRpcUrl,
     });

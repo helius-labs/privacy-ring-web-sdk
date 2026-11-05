@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/helius-labs/zolana.git",
-  "revision": "6bb4f7008294695ebe614f08affb215d4321a538",
-  "sdk": "0.8.0-alpha",
-  "tag": "ts-sdk-v0.8.0-alpha"
+  "revision": "abed9d6350f4524ad7486e94427a3025878b0633",
+  "sdk": "0.9.0-alpha",
+  "tag": "ts-sdk-v0.9.0-alpha"
 }

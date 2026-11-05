@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { formatAmount, parseAmount } from "@heliuslabs/zolana";
+import { formatAmount, parseAmount } from "@heliuslabs/spr";
 import { address, isAddress } from "@solana/kit";
 import { shapeByLabel, type KeyProgress, type Measurement } from "@heliuslabs/zolana-web-prover";
 

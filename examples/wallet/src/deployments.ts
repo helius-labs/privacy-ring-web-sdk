@@ -1,5 +1,5 @@
 // Application configuration. Policy selection is independent of the prover URL.
-import { SignedTeePolicy, teePolicyFromJson } from "@heliuslabs/zolana/client";
+import { SignedTeePolicy, teePolicyFromJson } from "@heliuslabs/spr/client";
 
 export function remoteProverConfig(proverUrl: string, policyFile: unknown) {
   return { proverUrl, proverTee: teePolicyFromJson(policyFile) };

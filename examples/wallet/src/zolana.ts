@@ -10,15 +10,15 @@ import {
   buildSetMergeEncryptionTransaction,
   buildTransferTransaction,
   buildWithdrawalTransaction,
-  createZolanaClient,
+  createSprClient,
   getPrivateTransactions,
   syncWallet,
   type Bytes32,
   type ShieldedAddress,
   type TransferPayment as Payment,
-} from "@heliuslabs/zolana";
-import { ed25519DerivationMessage } from "@heliuslabs/zolana/keypair";
-import { fetchUserRecord } from "@heliuslabs/zolana/wallet";
+} from "@heliuslabs/spr";
+import { ed25519DerivationMessage } from "@heliuslabs/spr/keypair";
+import { fetchUserRecord } from "@heliuslabs/spr/wallet";
 import {
   createKeyPairSignerFromPrivateKeyBytes,
   getAddressEncoder,
@@ -55,7 +55,7 @@ const remoteProver = import.meta.env.VITE_TEE_POLICY === undefined
   ? { proverUrl: teeProverUrl, proverTee: deployment.proverTee }
   : remoteProverConfig(teeProverUrl, JSON.parse(import.meta.env.VITE_TEE_POLICY));
 
-type Client = Awaited<ReturnType<typeof createZolanaClient>>;
+type Client = Awaited<ReturnType<typeof createSprClient>>;
 export type PrivateTransaction = ReturnType<typeof getPrivateTransactions>[number];
 
 export interface Session {
@@ -88,7 +88,7 @@ export async function openSession(seed: Uint8Array, onMeasurement: (m: Measureme
     proverUrl: endpoints.proverUrl,
     onMeasurement,
   });
-  const client = await createZolanaClient({
+  const client = await createSprClient({
     ...endpoints,
     // A local prover cannot answer the indexed route, so the client gathers proof data.
     proofDataSource: "client",
@@ -96,7 +96,7 @@ export async function openSession(seed: Uint8Array, onMeasurement: (m: Measureme
   });
   // Merges use the SDK's attested, encrypted transport, without the local
   // prover's fetch interception. Transfers continue to prove in the browser.
-  const mergeClient = await createZolanaClient({
+  const mergeClient = await createSprClient({
     ...endpoints,
     ...remoteProver,
   });
