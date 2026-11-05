@@ -71,11 +71,7 @@ policy signatures against pinned signing keys and checks network, expiry and
 version before attestation. `VITE_TEE_POLICY` accepts a reviewed static policy
 (bare or a deployment wrapper) for custom deployments; this override requires
 application-managed updates. `VITE_TEE_PROVER_URL` changes the URL without
-selecting a different policy. Gateways now use `/v1/spr`, `/attestation` and
-`Spr-Tee*` headers. The local transfer
+selecting a different policy. Gateways use the `/v1/spr` and `/attestation` routes
+and `Spr-Tee*` headers. The local transfer
 client uses loopback interception and needs no policy; the separate merge client
 always receives the configured remote policy explicitly.
-
-The 0.8 upgrade keeps the same program IDs and notes, but rotates the core
-proving keys. The browser downloads and verifies the new keys automatically;
-self-hosted keys must be updated. Rebuild proofs prepared with the old keys.
