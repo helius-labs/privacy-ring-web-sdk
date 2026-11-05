@@ -55,8 +55,8 @@ it("records shapes sent to a proving key's own path", async () => {
   expect(shapes).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ label: "2x2" }));
 });
 it.each([
-  ["http://localhost/prover/prove", { kind: "prove" }],
-  ["http://localhost/prover/prove?api-key=secret", { kind: "prove" }],
+  ["http://localhost/prover/prove", { kind: "unsupported" }],
+  ["http://localhost/prover/prove?api-key=secret", { kind: "unsupported" }],
   ["http://localhost/prover/prove/", { kind: "unsupported" }],
   ["http://localhost/prover/prove/status", { kind: "unsupported" }],
   ["http://localhost/prover/prove/transfer_ring_authority_4_4", { kind: "prove", keyFile: "transfer_ring_authority_4_4.key" }],
@@ -71,11 +71,14 @@ it.each([
 ])("routes %s", (url, route) => {
   expect(proveRoute(new URL(url), "http://localhost/prover/")).toEqual(route);
 });
-it("routes the Helius gateway's key-less prove path", () => {
+it("routes the Helius gateway's key paths", () => {
   const gateway = "https://devnet.helius-rpc.com/v1/spr?api-key=secret";
   expect(
+    proveRoute(new URL("https://devnet.helius-rpc.com/v1/spr/prove/merge_8_1?api-key=secret"), gateway),
+  ).toEqual({ kind: "prove", keyFile: "merge_8_1.key" });
+  expect(
     proveRoute(new URL("https://devnet.helius-rpc.com/v1/spr/prove?api-key=secret"), gateway),
-  ).toEqual({ kind: "prove" });
+  ).toEqual({ kind: "unsupported" });
   expect(
     proveRoute(new URL("https://devnet.helius-rpc.com/v1/spr/prove/status?jobId=1"), gateway),
   ).toEqual({ kind: "unsupported" });
