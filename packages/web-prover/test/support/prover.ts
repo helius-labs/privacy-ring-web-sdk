@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, vi } from "vitest";
 import {
-  WasmProver,
-  type WasmProverOptions,
+  SprWebProver,
+  type SprWebProverOptions,
   type WorkerRequest,
   type WorkerResponse,
   type WorkerFatal,
@@ -9,7 +9,8 @@ import {
 import type { Measurement } from "../../src/measurement.js";
 
 export const body = JSON.stringify({ circuitType: "transfer-confidential", nInputs: 2, nOutputs: 2 });
-export const proveBase = "http://localhost:3001/prove";
+export const proverUrl = "http://localhost:3001";
+export const proveBase = `${proverUrl}/prove`;
 export const endpoint = `${proveBase}/transfer_confidential_2_2`;
 export const key = new Uint8Array([1, 2, 3]);
 export const rawKey = new Uint8Array([7, 7, 7, 7]);
@@ -41,7 +42,7 @@ export class TestWorker extends EventTarget {
         value = { threads: 2, rawKeyFormat: TestWorker.rawKeyFormat };
         break;
       case "loadKey":
-        if (TestWorker.rejectRaw && bytesEqual(request.key, rawKey)) {
+        if (TestWorker.rejectRaw && request.raw) {
           this.message({ id: request.id, ok: false, error: "wasm_key_load_failed", ms: 1 });
           return;
         }
@@ -49,9 +50,6 @@ export class TestWorker extends EventTarget {
         break;
       case "prove":
         value = { proof: '{"proof":"test"}', witnessMs: 0, proveMs: 0, verifyMs: 0 };
-        break;
-      case "loadedKeys":
-        value = { keys: [] };
         break;
     }
     this.message({ id: request.id, ok: true, value, ms: 1 });
@@ -67,10 +65,6 @@ export class TestWorker extends EventTarget {
   terminate(): void {
     this.terminated = true;
   }
-}
-export function bytesEqual(buffer: ArrayBuffer, expected: Uint8Array): boolean {
-  const bytes = new Uint8Array(buffer);
-  return bytes.length === expected.length && bytes.every((byte, i) => byte === expected[i]);
 }
 export function current(): TestWorker {
   const worker = TestWorker.instances.at(-1);
@@ -92,12 +86,11 @@ export function failure(work: Promise<unknown>): Promise<unknown> {
 }
 export async function fixture(
   onMeasurement: (measurement: Measurement) => void = () => {},
-  options: Partial<WasmProverOptions> = {},
+  options: Partial<SprWebProverOptions> = {},
 ) {
   const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(key));
-  const prover = new WasmProver({
+  const prover = new SprWebProver({
     keyBaseUrl: "/keys",
-    proverUrl: "http://localhost:3001",
     onMeasurement,
     fetch,
     ...options,

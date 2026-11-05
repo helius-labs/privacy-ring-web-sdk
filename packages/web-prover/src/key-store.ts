@@ -14,7 +14,7 @@
 import { abortable, rethrowAbort } from "./abortable.js";
 import { WasmProverError } from "./errors.js";
 import { KEY_BASE_URL, KEY_DIGESTS, KEY_SET } from "./key-digests.js";
-import { catalogKeyUrls, sourceKeys, type ProvingKeyCatalog, type ProvingKeySource } from "./key-catalog.js";
+import { sourceKeys, type ProvingKeySource } from "./key-source.js";
 import { MERGE_SHAPES, TRANSFER_SHAPES, type ShapeKey } from "./shapes.js";
 
 /** One entry of `KEY_DIGESTS`, copied from `zopro-keys.lock`. */
@@ -54,8 +54,7 @@ export type KeyBytes = Readonly<{
 export interface KeyStoreOptions {
   /** Where keys are fetched from; the pinned key set on the Zolana CDN by default. */
   readonly keyBaseUrl?: string;
-  /** Download URLs from /proving-keys, checked against the bundled pins. */
-  readonly keyCatalog?: ProvingKeyCatalog;
+  /** Trusted runtime keys, in place of the pinned key set. */
   readonly keySource?: ProvingKeySource;
   readonly fetch: typeof globalThis.fetch;
   /** Ask the browser to keep the keys under storage pressure. */
@@ -64,7 +63,6 @@ export interface KeyStoreOptions {
 
 export class KeyStore {
   readonly #options: KeyStoreOptions;
-  readonly #catalogUrls: ReadonlyMap<string, string> | undefined;
   readonly #sourceKeys: ReturnType<typeof sourceKeys>["keys"] | undefined;
   readonly #cacheName: string;
   #prepared = false;
@@ -72,13 +70,12 @@ export class KeyStore {
 
   constructor(options: KeyStoreOptions) {
     this.#options = options;
-    if ([options.keyCatalog, options.keyBaseUrl, options.keySource].filter((value) => value !== undefined).length > 1)
-      throw new WasmProverError("wasm_key_catalog_invalid");
+    if (options.keyBaseUrl !== undefined && options.keySource !== undefined)
+      throw new WasmProverError("wasm_key_source_invalid");
     const source = options.keySource === undefined ? undefined : sourceKeys(options.keySource);
     this.#sourceKeys = source?.keys;
     this.#cacheName = source === undefined
       ? `${keyCachePrefix}-${KEY_SET}` : `zolana-runtime-proving-keys-${source.cacheKey}`;
-    this.#catalogUrls = options.keyCatalog === undefined ? undefined : catalogKeyUrls(options.keyCatalog);
   }
 
   /** The URL of the shape's zopro key file. */
@@ -87,11 +84,6 @@ export class KeyStore {
       const key = this.#sourceKeys.get(shape.keyFile);
       if (key === undefined) throw new WasmProverError("wasm_key_manifest_error");
       return key.url;
-    }
-    if (this.#catalogUrls !== undefined) {
-      const url = this.#catalogUrls.get(shape.keyFile);
-      if (url === undefined) throw new WasmProverError("wasm_key_manifest_error");
-      return url;
     }
     return `${(this.#options.keyBaseUrl ?? KEY_BASE_URL).replace(/\/+$/u, "")}/${this.digest(shape).file}`;
   }
@@ -109,8 +101,6 @@ export class KeyStore {
     const statuses: ProvingKeyStatus[] = [];
     for (const shape of [...TRANSFER_SHAPES, ...MERGE_SHAPES].sort((a, b) => this.digest(a).size - this.digest(b).size)) {
       const expected = this.digest(shape);
-      if (expected === undefined) continue;
-      if (this.#catalogUrls !== undefined && !this.#catalogUrls.has(shape.keyFile)) continue;
       const status = { keyFile: shape.keyFile, size: expected.size, downloaded: 0, decoded: false };
       statuses.push(status);
       if (cache === undefined) continue;
@@ -138,7 +128,7 @@ export class KeyStore {
   async rawKept(shape: ShapeKey, rawKeyFormat: string, signal: AbortSignal): Promise<boolean> {
     const expected = this.digest(shape);
     const cache = await this.#open(signal);
-    if (expected === undefined || cache === undefined) return false;
+    if (cache === undefined) return false;
     const hit = await optionalCache(() => cache.match(rawKeyUrl(this.url(shape))), signal);
     return (
       hit?.headers.get(rawSourceHeader) === expected.sha256 &&
@@ -271,8 +261,7 @@ export class KeyStore {
         const cached = await optionalCache(() => hit.arrayBuffer(), signal);
         if (cached !== undefined && (await abortable(matchesDigest(cached, expected), signal)))
           return { bytes: cached, raw: false, source: "cache", cacheable };
-        // Written before a rotation: same shape, different circuit. Evict rather
-        // than prove against it.
+        // Damaged: evict rather than prove against it.
         await optionalCache(() => cache.delete(url), signal);
       }
     }

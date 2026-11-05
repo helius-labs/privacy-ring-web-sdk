@@ -94,6 +94,7 @@ function loadKey(exportRaw = false): Promise<WorkerResponse> {
     kind: "loadKey",
     fileName: "transfer_confidential_2_2.key",
     key: new Uint8Array([1, 2, 3]).buffer,
+    raw: false,
     keySha256,
     exportRaw,
   });
@@ -131,9 +132,6 @@ it("loads a key, checks the gnark key it was built from and moves its raw form t
   expect(response.value).toMatchObject({ key: "transfer_confidential_2_2", inputs: 2, outputs: 2 });
   const raw = (response.value as { raw: Uint8Array }).raw;
   expect(scope.postMessage.mock.calls[0]![1]).toEqual([raw.buffer]);
-  expect((await send({ id: 3, kind: "loadedKeys" })).value).toEqual({
-    keys: ["transfer_confidential_2_2.key"],
-  });
 });
 
 it("refuses a key built from another gnark key", async () => {
@@ -141,7 +139,8 @@ it("refuses a key built from another gnark key", async () => {
   const response = await loadKey();
   expect(response).toMatchObject({ ok: false, error: "wasm_key_digest_mismatch" });
   expect(prover.free).toHaveBeenCalled();
-  expect((await send({ id: 3, kind: "loadedKeys" })).value).toEqual({ keys: [] });
+  // Nothing stays loaded to prove with.
+  expect(await send({ id: 3, kind: "prove", body: "{}" })).toMatchObject({ ok: false, error: "wasm_prove_failed" });
 });
 
 it("frees the loaded key before it loads the next", async () => {

@@ -20,10 +20,6 @@ The finalized core ceremony rotates all 41 transfer/merge conversions to
 browser key caches. Program IDs, notes and witness layouts are unchanged; proofs
 made with old keys must be rebuilt before submission.
 
-Runtime `keyCatalog` input can change download URLs only for conversions whose
-checksums and sizes match the bundled pins. It neither adds supported circuits
-nor replaces the trusted conversion manifest.
-
 The optional `keySource` API accepts the authenticated `ProvingKeySet` returned
 by `@heliuslabs/spr` 0.9.0-alpha's `fetchProvingKeySet()`. This needs a prover
 generation that serves runtime key sets (zolana #527). It does not change the

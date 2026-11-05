@@ -1,5 +1,4 @@
 import { keyForProveRequest, MAX_BROWSER_MERGE_INPUTS, type ShapeKey } from "./shapes.js";
-import { abortable } from "./abortable.js";
 
 /**
  * A request to the prover's `/prove`. A proof goes to its proving key's own
@@ -26,37 +25,6 @@ export function proveRoute(url: URL, proverUrl: string): ProveRoute | undefined 
   return /^[a-z0-9_-]+_\d+_\d+$/u.test(key)
     ? { kind: "prove", keyFile: `${key}.key` }
     : { kind: "unsupported" };
-}
-
-/** Observe only public circuit metadata; never retain the witness body. */
-export function observeProofRequests(
-  fetch: typeof globalThis.fetch,
-  proverUrl: string,
-  onShape: (shape: ShapeKey) => void,
-): typeof globalThis.fetch {
-  return async (input, init) => {
-    const url = new URL(input instanceof Request ? input.url : String(input));
-    if (proveRoute(url, proverUrl)?.kind === "prove") {
-      const signal =
-        init?.signal !== undefined
-          ? (init.signal ?? undefined)
-          : input instanceof Request
-            ? input.signal
-            : undefined;
-      signal?.throwIfAborted();
-      const body =
-        typeof init?.body === "string"
-          ? init.body
-          : input instanceof Request
-            ? await abortable(input.clone().text(), signal)
-            : undefined;
-      if (body !== undefined) {
-        const shape = proofRequestShape(body);
-        if (shape !== undefined) onShape(shape);
-      }
-    }
-    return fetch(input, init);
-  };
 }
 
 /** Whether `body` is a merge of more notes than the browser proves. */

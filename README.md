@@ -59,9 +59,9 @@ Proof timing and GPU profiling live under `examples/browser/scripts/` (`proof-ti
 ```ts
 import { SprWebProver } from "@heliuslabs/spr-web-prover";
 
-const prover = new SprWebProver({ proverUrl: "http://localhost:3001" });
+const prover = new SprWebProver();
 const { proof, proveMs, verifyMs } = await prover.proveRequest(requestJson);
-const localFetch = prover.createFetch();
+const localFetch = prover.createFetch("http://127.0.0.1:3001"); // the SDK client's proverUrl
 ```
 
 See the [package guide](packages/web-prover/README.md) for isolation headers, `threads: 0`, extensions, keys, and lifecycle.

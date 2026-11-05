@@ -1,5 +1,4 @@
 {
-  "format": 2,
   "zopro": {
     "repository": "https://github.com/helius-labs/zk-tools.git",
     "path": "zopro",

@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import { expect, it, vi } from "vitest";
 import { KEY_DIGESTS } from "../src/key-digests.js";
-import type { ProvingKeySource } from "../src/key-catalog.js";
+import type { ProvingKeySource } from "../src/key-source.js";
 import { KeyStore } from "../src/key-store.js";
 import { shapeByLabel } from "../src/shapes.js";
-import { WasmProver } from "../src/wasm-prover.js";
+import { SprWebProver } from "../src/wasm-prover.js";
 import { body, current, proverTestHooks } from "./support/prover.js";
 
 proverTestHooks();
@@ -13,18 +13,18 @@ const sha256 = createHash("sha256").update(bytes).digest("hex");
 const name = "transfer_confidential_2_2.key";
 const keySha256 = "cd".repeat(32);
 
-function source(cacheKey = "ab".repeat(32)): ProvingKeySource {
+function source(cacheKey = "ab".repeat(32), base = "https://keys.example"): ProvingKeySource {
   return { cacheKey, key(name) {
     const original = KEY_DIGESTS[name];
     if (original === undefined) throw new Error("unknown test key");
     return { file: original.file, size: bytes.length, sha256, keySha256,
-      url: `https://keys.example/${original.file}` };
+      url: `${base}/${original.file}` };
   } };
 }
 
 it("uses a downloaded release's URL, bytes and source digest for the worker", async () => {
   const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(bytes));
-  const prover = new WasmProver({ proverUrl: "http://localhost", keySource: source(), fetch });
+  const prover = new SprWebProver({ keySource: source(), fetch });
   try {
     await prover.proveRequest(body);
     expect(String(fetch.mock.calls[0]![0])).toBe("https://keys.example/transfer_confidential_2_2.zopro");
@@ -36,7 +36,7 @@ it("uses a downloaded release's URL, bytes and source digest for the worker", as
 
 it("does not send tampered downloads to the worker", async () => {
   const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(new Uint8Array([1, 2, 3])));
-  const prover = new WasmProver({ proverUrl: "http://localhost", keySource: source(), fetch });
+  const prover = new SprWebProver({ keySource: source(), fetch });
   try {
     await expect(prover.proveRequest(body)).rejects.toMatchObject({ code: "wasm_key_digest_mismatch" });
     expect(current().requests.some((request) => request.kind === "loadKey" || request.kind === "prove")).toBe(false);
@@ -53,9 +53,20 @@ it("snapshots metadata and rejects missing keys or conflicting options before HT
   expect(store.digest(shapeByLabel("2x2")).sha256).toBe(sha256);
   expect(store.url(shapeByLabel("2x2"))).toBe("https://keys.example/transfer_confidential_2_2.zopro");
   expect(() => new KeyStore({ keySource: { ...trusted, key: () => { throw new Error("absent"); } }, fetch })).toThrow();
-  expect(() => new KeyStore({ keySource: trusted, keyBaseUrl: "/keys", fetch })).toThrow();
-  expect(() => new KeyStore({ keySource: trusted, keyCatalog: { keys: [] }, fetch })).toThrow();
+  expect(() => new KeyStore({ keySource: trusted, keyBaseUrl: "/keys", fetch }))
+    .toThrow(expect.objectContaining({ code: "wasm_key_source_invalid" }));
   expect(fetch).not.toHaveBeenCalled();
+});
+
+it("allows HTTPS and loopback key URLs but rejects unsafe ones", () => {
+  for (const base of ["file://", "http://remote.example", "https://user:secret@host", "https://host/keys#fragment", "/relative"]) {
+    expect(() => new KeyStore({ keySource: source(undefined, base), fetch }))
+      .toThrow(expect.objectContaining({ code: "wasm_key_source_invalid" }));
+  }
+  for (const base of ["http://127.0.0.1", "http://[::1]", "http://mirror.localhost"]) {
+    const store = new KeyStore({ keySource: source(undefined, base), fetch });
+    expect(store.url(shapeByLabel("2x2"))).toBe(`${base}/transfer_confidential_2_2.zopro`);
+  }
 });
 
 it("keeps generations in separate caches and only clears the selected generation", async () => {

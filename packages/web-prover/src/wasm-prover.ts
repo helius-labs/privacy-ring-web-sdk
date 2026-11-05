@@ -1,11 +1,10 @@
 /**
  * Local proving in the browser, wired into the SDK without patching it.
  *
- * `ProverClient` takes an injectable `fetch`, and the runtime's `prove`
- * accepts and returns exactly the JSON a `POST /prove/<key>` exchange uses (it mirrors
- * `server.processProofSync`). So the whole integration is a `fetch` that
- * recognizes the prover URL and answers it from wasm instead of the network.
- * Everything else -- indexer calls, Solana RPC -- falls through untouched.
+ * The SDK's client takes an injectable `fetch`, and the runtime's `prove`
+ * accepts and returns exactly the JSON of a `POST /prove/<key>` exchange with
+ * the prover server. So the whole integration is a `fetch` that recognizes the
+ * prover URL and answers it from wasm instead of the network.
  *
  * The runtime is zopro-spr built for the browser: Zolana's request and
  * proof formats, gnark's keys repacked as zopro key files.
@@ -18,7 +17,7 @@ export { WasmProverError } from "./errors.js";
 import { KeyStore, type KeyBytes, type KeyDigest, type ProvingKeyStatus } from "./key-store.js";
 import { automaticProvingThreads } from "./proving-threads.js";
 import { createProverFetch } from "./prover-fetch.js";
-import type { ProvingKeyCatalog, ProvingKeySource } from "./key-catalog.js";
+import type { ProvingKeySource } from "./key-source.js";
 import { isWideMerge, proofRequestShape } from "./proof-requests.js";
 import { type ShapeKey } from "./shapes.js";
 
@@ -31,13 +30,14 @@ export type WorkerRequest =
       fileName: string;
       /** The pinned key file, or the raw form of an earlier load. */
       key: ArrayBuffer;
+      /** Whether `key` is the raw form, which loads without decompression. */
+      raw: boolean;
       /** The gnark proving key's sha256 the key file was built from, which proofs report. */
       keySha256: string;
       /** Ask for the raw form back, to cache. */
       exportRaw: boolean;
     }>
-  | Readonly<{ id: number; kind: "prove"; body: string }>
-  | Readonly<{ id: number; kind: "loadedKeys" }>;
+  | Readonly<{ id: number; kind: "prove"; body: string }>;
 
 /**
  * `Omit` over a union collapses to the union's common keys, which would erase
@@ -57,7 +57,7 @@ export type WorkerResponse = Readonly<{
   ms: number;
 }>;
 
-export interface WasmProverOptions {
+export interface SprWebProverOptions {
   /**
    * Threads of the proving pool (one or more; omit to choose automatically), or
    * `0` for the single-thread runtime without SharedArrayBuffer.
@@ -70,17 +70,10 @@ export interface WasmProverOptions {
    */
   readonly keyBaseUrl?: string;
   /**
-   * A supplied /proving-keys catalog. Its zopro URLs replace the default CDN;
-   * both artifact and source-key digests must match the bundled pins. Missing
-   * conversions fail locally. Mutually exclusive with keyBaseUrl; never fetched
-   * automatically and requires no TEE policy.
+   * Trusted runtime keys from an authenticated source, such as
+   * `client.fetchProvingKeySet()`. Mutually exclusive with keyBaseUrl.
    */
-  readonly keyCatalog?: ProvingKeyCatalog;
-  /** Trusted runtime keys from an authenticated source, such as `client.fetchProvingKeySet()`.
-   * Mutually exclusive with keyCatalog and keyBaseUrl. */
   readonly keySource?: ProvingKeySource;
-  /** The prover URL handed to the SDK; requests to it are intercepted. */
-  readonly proverUrl: string;
   readonly fetch?: typeof globalThis.fetch;
   /** Override worker construction for tests or a custom bundler. */
   readonly workerFactory?: () => Worker;
@@ -99,7 +92,7 @@ export interface WasmProverOptions {
  * Owns the worker and the queue of its work; the keys live in a `KeyStore`
  * and the SDK's `fetch` comes from `createProverFetch`.
  */
-export class WasmProver {
+export class SprWebProver {
   #worker: Worker | undefined;
   #factory: (() => Worker) | undefined;
   #initialization: Promise<void> | undefined;
@@ -137,20 +130,19 @@ export class WasmProver {
     number,
     Readonly<{ resolve: (value: WorkerResponse) => void; reject: (error: unknown) => void }>
   >();
-  /** The key the worker holds; one deserialized key is resident at a time. */
-  readonly #loaded = new Set<string>();
-  readonly #options: WasmProverOptions;
+  /** The key file the worker holds; one deserialized key is resident at a time. */
+  #loaded: string | undefined;
+  readonly #options: SprWebProverOptions;
   readonly #store: KeyStore;
   readonly #fetch: typeof globalThis.fetch;
 
-  constructor(options: WasmProverOptions) {
+  constructor(options: SprWebProverOptions = {}) {
     this.#options = options;
     this.#fetch = options.fetch ?? globalThis.fetch.bind(globalThis);
     this.#factory = options.workerFactory ?? createProverWorker;
     this.#store = new KeyStore({
       fetch: this.#fetch,
       ...(options.keyBaseUrl === undefined ? {} : { keyBaseUrl: options.keyBaseUrl }),
-      ...(options.keyCatalog === undefined ? {} : { keyCatalog: options.keyCatalog }),
       ...(options.keySource === undefined ? {} : { keySource: options.keySource }),
       ...(options.persistStorage === undefined ? {} : { persistStorage: options.persistStorage }),
     });
@@ -235,11 +227,6 @@ export class WasmProver {
     signal.throwIfAborted();
   }
 
-  /** Downloads (or reads from cache) and deserializes one shape's proving key. */
-  async ensureKey(shape: ShapeKey, signal?: AbortSignal): Promise<void> {
-    return this.#enqueue((active) => this.#loadKey(shape, active), signal);
-  }
-
   /**
    * Downloads, checks and decodes `shapes` ahead of the proofs that need them, so
    * a first proof doesn't wait seconds for its key. With the Cache API each
@@ -290,7 +277,7 @@ export class WasmProver {
   ): Promise<void> {
     await this.#ensureStarted(signal);
     const expected = this.#store.digest(shape);
-    if (this.#loaded.has(shape.keyFile)) {
+    if (this.#loaded === shape.keyFile) {
       // Reported rather than returned silently: a second sweep would otherwise
       // show a passing run with no steps, which reads as a lost measurement.
       this.#options.onMeasurement?.({
@@ -320,9 +307,10 @@ export class WasmProver {
       bytes: key.bytes.byteLength,
       note: `${shape.keyFile} from ${key.raw ? "the raw-key cache" : key.source}`,
     });
+    // The callback may have cancelled.
     signal.throwIfAborted();
 
-    this.#loaded.clear();
+    this.#loaded = undefined;
     progress("decode", expected.size);
     let response: WorkerResponse;
     try {
@@ -357,8 +345,7 @@ export class WasmProver {
         new Uint8Array(raw.buffer, raw.byteOffset, raw.byteLength),
         signal,
       );
-    this.#loaded.clear();
-    this.#loaded.add(shape.keyFile);
+    this.#loaded = shape.keyFile;
   }
 
   #installKey(shape: ShapeKey, key: KeyBytes, expected: KeyDigest): Promise<WorkerResponse> {
@@ -367,6 +354,7 @@ export class WasmProver {
         kind: "loadKey",
         fileName: shape.keyFile,
         key: key.bytes,
+        raw: key.raw,
         keySha256: expected.keySha256,
         // The runtime's raw form, to keep in place of the pinned file.
         exportRaw: !key.raw && key.cacheable,
@@ -376,13 +364,14 @@ export class WasmProver {
   }
 
   /**
-   * A `fetch` for `SprClientConfig.fetch`. Proof requests to `/prove/<key>`
-   * are answered by the runtime, other paths below `/prove` are refused, and
-   * everything else is delegated, so one shim covers the client.
+   * A `fetch` for `SprClientConfig.fetch`, given the client's `proverUrl`.
+   * Proof requests to its `/prove/<key>` are answered by the runtime, other
+   * paths below `/prove` are refused, and everything else is delegated, so one
+   * shim covers the client.
    */
-  createFetch(): typeof globalThis.fetch {
+  createFetch(proverUrl: string): typeof globalThis.fetch {
     return createProverFetch({
-      proverUrl: this.#options.proverUrl,
+      proverUrl,
       fetch: this.#fetch,
       ...(this.#options.onMeasurement === undefined
         ? {}
@@ -433,23 +422,6 @@ export class WasmProver {
     }, signal);
   }
 
-  async loadedKeys(): Promise<readonly string[]> {
-    return this.#enqueue(async (signal) => {
-      await this.#ensureStarted(signal);
-      const response = await this.#call({ kind: "loadedKeys" });
-      const value = response.value;
-      if (
-        typeof value === "object" &&
-        value !== null &&
-        "keys" in value &&
-        Array.isArray(value.keys)
-      ) {
-        return value.keys.map(String);
-      }
-      throw new WasmProverError("wasm_invalid_response");
-    });
-  }
-
   terminate(): void {
     this.#factory = undefined;
     this.#fail(new WasmProverError("wasm_worker_terminated"));
@@ -460,7 +432,7 @@ export class WasmProver {
     this.#worker = undefined;
     this.#initialization = undefined;
     this.#threads = 0;
-    this.#loaded.clear();
+    this.#loaded = undefined;
     for (const pending of this.#pending.values()) pending.reject(error);
     this.#pending.clear();
     const lifetime = this.#lifetime;
@@ -495,6 +467,6 @@ function createProverWorker(): Worker {
   // The compiled worker, which the app's bundler emits with the runtime beside it.
   return new Worker(new URL("./prover.worker.js", import.meta.url), {
     type: "module",
-    name: "zolana-web-prover",
+    name: "spr-web-prover",
   });
 }

@@ -1,14 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { SHIELDED_POOL_PROGRAM_ID, USER_REGISTRY_PROGRAM_ID } from "@heliuslabs/spr/interface";
 import { SignedTeePolicy, teePolicyFromJson } from "@heliuslabs/spr/client";
-import { ZOLANA_PROGRAM_IDS } from "../../../packages/web-prover/src/protocol.ts";
 import { deployments, remoteProverConfig } from "../src/deployments.ts";
 import { burnerStorageKey, loadBurnerSeed, resetBurner } from "../src/burner.ts";
 
-test("deployment pins agree with the SDK and select signed policies by network", async () => {
-  assert.equal(SHIELDED_POOL_PROGRAM_ID, ZOLANA_PROGRAM_IDS.shieldedPool);
-  assert.equal(USER_REGISTRY_PROGRAM_ID, ZOLANA_PROGRAM_IDS.userRegistry);
+test("deployments select signed policies by network", async () => {
   for (const [network, { proverTee }] of Object.entries(deployments)) {
     assert.ok(proverTee instanceof SignedTeePolicy);
     const urls: string[] = [];

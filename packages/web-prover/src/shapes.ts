@@ -59,11 +59,6 @@ export const MERGE_SHAPES: readonly ShapeKey[] = Object.freeze(
     Object.freeze({ inputs, outputs, label: `merge ${String(inputs)}x1`, keyFile, keyBytes }),
   ).filter((shape) => shape.inputs <= MAX_BROWSER_MERGE_INPUTS),
 );
-/** The smallest merge circuit. */
-export const MERGE_SHAPE: ShapeKey = MERGE_SHAPES[0]!;
-
-export const MERGE_KEY_FILE = MERGE_SHAPE.keyFile;
-export const MERGE_KEY_BYTES = MERGE_SHAPE.keyBytes;
 
 /**
  * The proving key a `/prove` request needs, resolved from the request itself
@@ -131,10 +126,4 @@ export function shapeByLabel(label: string): ShapeKey {
   const found = TRANSFER_SHAPES.find((shape) => shape.label === label);
   if (found === undefined) throw new Error(`unknown shape ${label}`);
   return found;
-}
-
-export function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${String(bytes)} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

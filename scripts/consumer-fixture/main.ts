@@ -18,7 +18,6 @@ window.checkPackedProver = async () => {
   for (const threads of threadCounts) {
     const prover = new SprWebProver({
       keyBaseUrl: "/keys",
-      proverUrl: location.origin + "/local",
       threads,
       onMeasurement: (measurement) => measurements.push(measurement),
     });
@@ -40,7 +39,7 @@ window.checkPackedProver = async () => {
           rejected = true;
         }
         if (!rejected) throw new Error("Malformed witness accepted");
-        const response = await prover.createFetch()(location.origin + "/local/prove/transfer_confidential_2_2", {
+        const response = await prover.createFetch(location.origin + "/local")(location.origin + "/local/prove/transfer_confidential_2_2", {
           method: "POST",
           body: JSON.stringify(invalid),
         });

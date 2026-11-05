@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { WasmProver } from "../src/wasm-prover.js";
+import { SprWebProver } from "../src/wasm-prover.js";
 import type { KeyProgress } from "../src/measurement.js";
 import { MERGE_SHAPES, TRANSFER_SHAPES } from "../src/shapes.js";
 import { proverTestHooks } from "./support/prover.js";
@@ -80,9 +80,8 @@ function host(
 }
 
 function prover(fetch: typeof globalThis.fetch, onKeyProgress?: (progress: KeyProgress) => void) {
-  return new WasmProver({
+  return new SprWebProver({
     keyBaseUrl: "/keys",
-    proverUrl: "http://localhost:3001",
     fetch,
     ...(onKeyProgress === undefined ? {} : { onKeyProgress }),
   });
@@ -103,25 +102,26 @@ it("downloads a key in ranged parts and keeps only its decoded form", async () =
   instance.terminate();
 });
 
-it("downloads from a catalog URL with its query and reuses the decoded cache without networking", async () => {
+it("downloads from a key source URL with its query and reuses the decoded cache without networking", async () => {
   const { fetch } = host();
-  const name = "transfer_confidential_2_2.key";
-  const pin = KEY_DIGESTS[name]!;
-  const url = "https://mirror.example/converted/key.bin?version=pinned";
+  const url = "https://mirror.example/converted/transfer_confidential_2_2.zopro?version=pinned";
   const options = {
-    proverUrl: "http://127.0.0.1:3001", fetch,
-    keyCatalog: { keys: [{ name, artifacts: [
-      { format: "gnark" as const, sha256: pin.keySha256, size: 1, url: "https://keys.example/new/key.key" },
-      { format: "zopro" as const, sha256: pin.sha256, size: pin.size, url },
-    ] }] },
+    fetch,
+    keySource: {
+      cacheKey: "ab".repeat(32),
+      key: (name: string) => {
+        const pin = KEY_DIGESTS[name]!;
+        return { ...pin, url: `https://mirror.example/converted/${pin.file}?version=pinned` };
+      },
+    },
   };
-  const first = new WasmProver(options);
+  const first = new SprWebProver(options);
   await first.proveRequest(body);
   expect(fetch.mock.calls.every(([input]) => input === url)).toBe(true);
   expect(entries.has(`${url}&zolana-key=raw`)).toBe(true);
   first.terminate();
   fetch.mockClear();
-  const second = new WasmProver(options);
+  const second = new SprWebProver(options);
   await second.proveRequest(body);
   expect(fetch).not.toHaveBeenCalled();
   second.terminate();

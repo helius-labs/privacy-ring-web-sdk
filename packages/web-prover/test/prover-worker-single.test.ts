@@ -97,6 +97,7 @@ it("decompresses a key file across workers before from_vectors", async () => {
     kind: "loadKey",
     fileName: "transfer_confidential_2_2.key",
     key: key.buffer,
+    raw: false,
     keySha256,
     exportRaw: false,
   });
@@ -106,17 +107,17 @@ it("decompresses a key file across workers before from_vectors", async () => {
   expect(single.SprProver).not.toHaveBeenCalled();
 });
 
-it("loads a raw key through the constructor", async () => {
+it("loads a raw form through the constructor", async () => {
   expect((await send({ id: 1, kind: "init", threads: 0 })).ok).toBe(true);
   single.SprProver.mockImplementation(function () {
     return prover;
   });
-  const raw = Uint8Array.from([...new TextEncoder().encode("zopro-raw3"), 0, 0, 0, 0, 0, 0]);
   const response = await send({
     id: 2,
     kind: "loadKey",
     fileName: "transfer_confidential_2_2.key",
-    key: raw.buffer,
+    key: new Uint8Array([7, 7, 7, 7]).buffer,
+    raw: true,
     keySha256,
     exportRaw: false,
   });

@@ -5,6 +5,10 @@
 - Breaking: the package is published as `@heliuslabs/spr-web-prover`, and `ZolanaWebProver` and the `zolana-prover-keys` command become `SprWebProver` and `spr-prover-keys`. Replace the dependency, imports and install scripts; key caches are kept.
 - `keySource` accepts the authenticated runtime key set from `@heliuslabs/spr` 0.9.0-alpha's `fetchProvingKeySet()`, including new download URLs, sizes and checksums, for compatible transfer and merge circuits.
 - Runtime key sets stay fixed per prover instance and use separate caches; clear obsolete instances with `clearKeys()`.
+- Breaking: `SprWebProver` and `SprWebProverOptions` are the prover's only names; import them in place of `WasmProver` and `WasmProverOptions`.
+- Breaking: `createFetch(proverUrl)` takes the client's `proverUrl`, which the constructor does not; every constructor option is optional.
+- Breaking: `keySource` is the way to supply key download URLs, and `keyCatalog` and `ProvingKeyCatalog` are gone. A rejected key source fails with `wasm_key_source_invalid`.
+- Breaking: the package no longer exports `ZOLANA_PROGRAM_IDS` and `ZOLANA_PROTOCOL_VERSION` (take the program IDs from `@heliuslabs/spr/interface`), `observeProofRequests`, `MERGE_SHAPE`, `MERGE_KEY_FILE` and `MERGE_KEY_BYTES` (use `MERGE_SHAPES`), `formatBytes`, `ensureKey()` (use `prefetch()`), `loadedKeys()`, or the worker's `WorkerRequest` and `WorkerResponse` types.
 
 ## 0.6.0-alpha — 2026-11-03
 

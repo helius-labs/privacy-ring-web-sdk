@@ -21,35 +21,31 @@ export async function loadAsset(baseUrl, name) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-export function sha256(bytes) {
+function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-/** Whether `bytes` have the pinned size and SHA-256. */
-export function matchesEntry(bytes, expected) {
-  return (
-    Number.isSafeInteger(expected.size) &&
-    bytes.length === expected.size &&
-    /^[a-f0-9]{64}$/.test(expected.sha256) &&
-    sha256(bytes) === expected.sha256
-  );
+/** Why `bytes` do not have the pinned size and SHA-256; undefined when they do. */
+function mismatch(bytes, expected) {
+  if (!Number.isSafeInteger(expected.size) || bytes.length !== expected.size) {
+    return `has size ${bytes.length}; expected ${expected.size}`;
+  }
+  if (!/^[a-f0-9]{64}$/.test(expected.sha256)) return "has an invalid pinned SHA-256";
+  if (sha256(bytes) !== expected.sha256) return "failed SHA-256 verification";
+  return undefined;
 }
 
+/** Throws unless `bytes` have the pinned size and SHA-256. */
 export function verifyBytes(name, bytes, expected) {
-  if (!Number.isSafeInteger(expected.size) || bytes.length !== expected.size) {
-    throw new Error(`${name} has size ${bytes.length}; expected ${expected.size}`);
-  }
-  if (!/^[a-f0-9]{64}$/.test(expected.sha256)) {
-    throw new Error(`${name} has an invalid pinned SHA-256`);
-  }
-  if (sha256(bytes) !== expected.sha256) throw new Error(`${name} failed SHA-256 verification`);
+  const reason = mismatch(bytes, expected);
+  if (reason !== undefined) throw new Error(`${name} ${reason}`);
 }
 
 /** Whether the file at `path` exists with the pinned size and SHA-256. */
 export async function existingFileMatches(path, expected) {
   try {
     if ((await stat(path)).size !== expected.size) return false;
-    return matchesEntry(await readFile(path), expected);
+    return mismatch(await readFile(path), expected) === undefined;
   } catch (error) {
     if (error.code === "ENOENT") return false;
     throw error;
