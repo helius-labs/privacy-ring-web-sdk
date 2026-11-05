@@ -40,9 +40,7 @@ Prove from an extension page (not the service worker). For threaded proving, set
 ```ts
 import { SprWebProver, WasmProverError } from "@heliuslabs/spr-web-prover";
 
-const prover = new SprWebProver({
-  proverUrl: "http://127.0.0.1:3001",
-});
+const prover = new SprWebProver();
 
 try {
   const requestJson = await (await fetch("/fixtures/transfer-2x2.json")).text();
@@ -77,12 +75,11 @@ with attestation, and refuses expired or invalid policies. Select the network
 explicitly; changing a proxy URL does not change trust. Custom deployments may
 supply a complete reviewed static policy with `teePolicyFromJson` instead.
 The wallet example shows devnet and mainnet configuration.
-`ZOLANA_PROGRAM_IDS` and `ZOLANA_PROTOCOL_VERSION` still describe protocol compatibility.
 
 For local proofs, use a loopback URL and omit `proverTee`. Keep the explicit policy
 on a separate client when using remote merges.
 
-Pass `prover.createFetch()` as `fetch`, set `proofDataSource: "client"`, and use the same loopback `proverUrl` on the client (0.8.0-alpha encrypts non-loopback prover calls for an enclave). Then prove through `LocalKeys.fromKeypair` or, in a wallet, `LocalKeys.fromDerivationSeed`. Paths under that URL’s `/prove` are answered locally; everything else is delegated.
+Pass `prover.createFetch(proverUrl)` as `fetch`, set `proofDataSource: "client"`, and use the same loopback `proverUrl` on the client (0.8.0-alpha encrypts non-loopback prover calls for an enclave). Then prove through `LocalKeys.fromKeypair` or, in a wallet, `LocalKeys.fromDerivationSeed`. Paths under that URL’s `/prove` are answered locally; everything else is delegated.
 
 ## Self-host keys
 
@@ -94,34 +91,13 @@ Pass `keyBaseUrl` (for example `"/keys"`). Names must appear in the pinned key s
 
 Keys are tens to hundreds of MB; a loaded key needs more working memory. Only one shape is resident at a time. The first load decompresses points and caches a raw form in the Cache API; later loads are much faster. Pass `persistStorage: true` to request durable storage. Downloads resume in 8 MB parts after interrupt.
 
-## Supply a download catalog
-
-`keyCatalog` accepts `/proving-keys` JSON (`keys[].artifacts[]`). Obtain
-it through your application's chosen source, or bundle a snapshot:
-
-```ts
-const prover = new SprWebProver({
-  proverUrl: "http://127.0.0.1:3001",
-  keyCatalog: catalog,
-});
-```
-
-The gnark source digest and zopro checksum and size must match the bundled pins.
-Downloads use the complete zopro URL, including its prefix and query. HTTPS and
-loopback HTTP are accepted. `keyCatalog` and `keyBaseUrl` are mutually exclusive;
-a missing conversion fails without falling back to another source. The catalog
-describes downloads, not server routes or supported circuits. Proofs still
-report the gnark digest as `provingKeySha256`.
-
-The prover never fetches a catalog or policy itself. Omit `keyCatalog` to use the
-bundled URLs. See [UPSTREAM.md](../../UPSTREAM.md) for manifest provenance and
-sync instructions.
-
 ## Runtime key updates
 
 `keySource` accepts an authenticated `ProvingKeySet` from protocol SDK
-`0.9.0-alpha` or later. It can replace the bundled checksums for compatible
-confidential signer transfers and merges; a raw `keyCatalog` cannot.
+`0.9.0-alpha` or later. It can replace the bundled URLs and checksums for
+compatible confidential signer transfers and merges. The prover never fetches a
+key set or policy itself; omit `keySource` to use the bundled pins (see
+[UPSTREAM.md](../../UPSTREAM.md) for their provenance).
 
 ```ts
 import { SignedTeePolicy, SprClient } from "@heliuslabs/spr/client";
@@ -132,14 +108,14 @@ const provingKeys = await new SprClient({
   proverTee: SignedTeePolicy.forNetwork("devnet"),
 }).fetchProvingKeySet();
 const proverUrl = "http://127.0.0.1:3001";
-const prover = new SprWebProver({ proverUrl, keySource: provingKeys });
+const prover = new SprWebProver({ keySource: provingKeys });
 const client = new SprClient({
   solanaRpcUrl: "https://your-solana-rpc.example",
   indexerUrl: "https://your-photon.example",
   proverUrl,
   proofDataSource: "client",
   provingKeys,
-  fetch: prover.createFetch(),
+  fetch: prover.createFetch(proverUrl),
 });
 ```
 
@@ -151,7 +127,8 @@ other; use `clearKeys()` on an obsolete instance to reclaim its files.
 Use `prover.provingKeys()` for current file sizes; `ShapeKey.keyBytes` describes
 the bundled key set.
 
-`keySource`, `keyCatalog` and `keyBaseUrl` are mutually exclusive. A custom
+`keySource` and `keyBaseUrl` are mutually exclusive. Key URLs must be HTTPS, or
+HTTP on loopback. A custom
 `ProvingKeySource` is an explicit trust decision by the application: authenticate
 and approve its metadata before passing it in. New proof-input layouts, circuits
 or solver features still need an SDK/runtime update. Old proofs must be rebuilt

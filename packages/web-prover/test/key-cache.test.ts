@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { KEY_BASE_URL, KEY_SET } from "../src/key-digests.js";
-import { WasmProver, type WorkerRequest } from "../src/wasm-prover.js";
+import { SprWebProver, type WorkerRequest } from "../src/wasm-prover.js";
 import type { Measurement } from "../src/measurement.js";
 import {
   TestWorker,
@@ -11,6 +11,7 @@ import {
   fixture,
   key,
   proverTestHooks,
+  proverUrl,
   rawKey,
   request,
 } from "./support/prover.js";
@@ -74,7 +75,7 @@ describe("best-effort proving-key cache", () => {
       const error = new DOMException("cancelled", "AbortError");
       if (operation === "open") storage.open.mockRejectedValue(error);
       else cache[operation].mockRejectedValue(error);
-      await expect(prover.createFetch()(endpoint, { method: "POST", body })).rejects.toBe(error);
+      await expect(prover.createFetch(proverUrl)(endpoint, { method: "POST", body })).rejects.toBe(error);
       expect(current().requests.some((request) => request.kind === "loadKey")).toBe(false);
       prover.terminate();
     },
@@ -184,7 +185,7 @@ describe("raw proving-key cache", () => {
     const first = await fixture();
     await first.prover.proveRequest(body);
     const pinned = loadKeyRequest();
-    expect(pinned).toMatchObject({ keySha256: gnarkKeySha256, exportRaw: true });
+    expect(pinned).toMatchObject({ raw: false, keySha256: gnarkKeySha256, exportRaw: true });
     expect(new Uint8Array(pinned.key)).toEqual(key);
     expect([...cache.entries.keys()]).toEqual([rawUrl]);
     const stored = cache.entries.get(rawUrl)!;
@@ -198,7 +199,7 @@ describe("raw proving-key cache", () => {
     await second.prover.proveRequest(body);
     expect(keyDownloads(second.fetch)).toBe(0);
     const raw = loadKeyRequest();
-    expect(raw).toMatchObject({ keySha256: gnarkKeySha256, exportRaw: false });
+    expect(raw).toMatchObject({ raw: true, keySha256: gnarkKeySha256, exportRaw: false });
     expect(new Uint8Array(raw.key)).toEqual(rawKey);
     expect(steps.find((step) => step.step === "key-fetch")?.note).toContain("raw-key cache");
     second.prover.terminate();
@@ -313,10 +314,7 @@ describe("key cache per key set", () => {
 describe("key source", () => {
   it("fetches keys from the pinned CDN folder unless keyBaseUrl is set", async () => {
     const fetch = vi.fn<typeof globalThis.fetch>(async () => new Response(key));
-    const prover = new WasmProver({
-      proverUrl: "http://localhost:3001",
-      fetch,
-    });
+    const prover = new SprWebProver({ fetch });
     await prover.proveRequest(body);
     expect(fetch.mock.calls.map(([input]) => String(input))).toEqual([
       `${KEY_BASE_URL}transfer_confidential_2_2.zopro`,

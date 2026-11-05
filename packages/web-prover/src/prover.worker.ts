@@ -18,6 +18,7 @@
 import type { WorkerRequest, WorkerResponse } from "./wasm-prover.js";
 import { operationError, WasmProverError } from "./errors.js";
 import { decodeKey } from "./key-decoders.js";
+import { automaticProvingThreads } from "./proving-threads.js";
 import {
   importSingleRuntime,
   importThreadedRuntime,
@@ -29,14 +30,11 @@ import {
 let runtime: Runtime | undefined;
 let pooled = false;
 let activeThreads = 0;
-let loaded: { fileName: string; prover: SprProver } | undefined;
+let loaded: SprProver | undefined;
 
 // Rayon's helpers wait for every thread to report ready, and a thread whose script
 // the page refuses never does; a pool that has not started by then has failed.
 const threadPoolTimeoutMs = 30_000;
-
-/** Magic of a cached raw key (`zopro-raw-3`); those skip worker decompression. */
-const rawKeyMagic = new TextEncoder().encode("zopro-raw3\0\0\0\0\0\0");
 
 async function init(threads: number): Promise<void> {
   if (runtime !== undefined) return;
@@ -46,7 +44,7 @@ async function init(threads: number): Promise<void> {
   if (threads > 0) {
     if (!globalThis.crossOriginIsolated)
       throw new Error(
-        "Threaded proving requires cross-origin isolation. Use the Vite server with COOP/COEP headers, or set threads: 0.",
+        "threaded proving needs a cross-origin isolated page; set threads: 0 without isolation",
       );
     const module = await importThreadedRuntime();
     await module.default();
@@ -82,36 +80,23 @@ function requireRuntime(): Runtime {
   return runtime;
 }
 
-function isRawKey(key: Uint8Array): boolean {
-  if (key.byteLength < rawKeyMagic.byteLength) return false;
-  for (let i = 0; i < rawKeyMagic.byteLength; i++) {
-    if (key[i] !== rawKeyMagic[i]) return false;
-  }
-  return true;
-}
-
-/** Decoder workers for a key file on the single-thread path. */
-function decoderWorkers(): number {
-  const reported = globalThis.navigator?.hardwareConcurrency;
-  if (reported === undefined || !Number.isFinite(reported) || reported < 1) return 4;
-  return Math.min(8, Math.floor(reported));
-}
-
 async function loadKey(
-  fileName: string,
   key: Uint8Array,
+  isRaw: boolean,
   keySha256: string,
   exportRaw: boolean,
 ): Promise<{ key: string; inputs: number; outputs: number; raw?: Uint8Array }> {
   const module = requireRuntime();
   // One key at a time: its points are most of the wasm heap.
-  loaded?.prover.free();
+  loaded?.free();
   loaded = undefined;
   let prover: SprProver;
-  if (pooled || isRawKey(key)) {
+  // A raw form needs no decompression, and the pool decompresses a key file itself.
+  if (pooled || isRaw) {
     prover = new module.SprProver(key);
   } else {
-    const vectors = await decodeKey(module, key, decoderWorkers());
+    // Decoder workers for a key file on the single-thread path.
+    const vectors = await decodeKey(module, key, Math.min(8, automaticProvingThreads()));
     if (vectors.length !== 5) throw new Error("key decompress returned the wrong vectors");
     prover = module.SprProver.from_vectors(
       key,
@@ -126,7 +111,7 @@ async function loadKey(
     prover.free();
     throw new WasmProverError("wasm_key_digest_mismatch");
   }
-  loaded = { fileName, prover };
+  loaded = prover;
   const info = { key: prover.name(), inputs: prover.inputs(), outputs: prover.outputs() };
   if (!exportRaw) return info;
   const raw = prover.export_raw();
@@ -134,8 +119,8 @@ async function loadKey(
 }
 
 async function prove(body: string): Promise<ProofValue> {
-  if (loaded === undefined) throw new Error("no key is loaded");
-  const { prover } = loaded;
+  const prover = loaded;
+  if (prover === undefined) throw new Error("no key is loaded");
   try {
     return await prover.prove(body);
   } catch (error) {
@@ -160,21 +145,18 @@ async function handle(request: WorkerRequest): Promise<unknown> {
     case "init":
       await init(request.threads);
       return {
-        initialized: true,
         threads: activeThreads,
         rawKeyFormat: requireRuntime().raw_format(),
       };
     case "loadKey":
       return await loadKey(
-        request.fileName,
         new Uint8Array(request.key),
+        request.raw,
         request.keySha256,
         request.exportRaw,
       );
     case "prove":
       return await prove(request.body);
-    case "loadedKeys":
-      return { keys: loaded === undefined ? [] : [loaded.fileName] };
   }
 }
 

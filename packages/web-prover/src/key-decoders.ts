@@ -93,6 +93,6 @@ function createKeyDecoder(): Worker {
   // The compiled decoder, which the app's bundler emits beside this worker.
   return new Worker(new URL("./key-decoder.worker.js", import.meta.url), {
     type: "module",
-    name: "zolana-key-decoder",
+    name: "spr-key-decoder",
   });
 }

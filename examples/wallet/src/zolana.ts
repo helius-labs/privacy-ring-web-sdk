@@ -84,15 +84,12 @@ export interface Snapshot {
  * `/prove/<key>` requests locally, and everything else goes to the network.
  */
 export async function openSession(seed: Uint8Array, onMeasurement: (m: Measurement) => void): Promise<Session> {
-  const prover = new SprWebProver({
-    proverUrl: endpoints.proverUrl,
-    onMeasurement,
-  });
+  const prover = new SprWebProver({ onMeasurement });
   const client = await createSprClient({
     ...endpoints,
     // A local prover cannot answer the indexed route, so the client gathers proof data.
     proofDataSource: "client",
-    fetch: limitLocalProofs(prover.createFetch(), endpoints.proverUrl),
+    fetch: limitLocalProofs(prover.createFetch(endpoints.proverUrl), endpoints.proverUrl),
   });
   // Merges use the SDK's attested, encrypted transport, without the local
   // prover's fetch interception. Transfers continue to prove in the browser.

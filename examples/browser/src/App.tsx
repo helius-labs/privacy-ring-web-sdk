@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { automaticProvingThreads, WasmProver } from "@heliuslabs/spr-web-prover";
+import { automaticProvingThreads, SprWebProver } from "@heliuslabs/spr-web-prover";
 
 type Mode = "proof" | "benchmark";
 type ThreadMode = "auto" | "custom" | "single";
 type Phase = "loading" | "idle" | "starting" | "preparing" | "proving";
-type ProofResult = Awaited<ReturnType<WasmProver["proveRequest"]>>;
+type ProofResult = Awaited<ReturnType<SprWebProver["proveRequest"]>>;
 
 function median(values: readonly number[]): number {
   const sorted = [...values].sort((a, b) => a - b);
@@ -26,7 +26,7 @@ export function App(): React.ReactElement {
   const [preparationMs, setPreparationMs] = useState<number>();
   const [activeThreads, setActiveThreads] = useState<number>();
   const [completed, setCompleted] = useState(0);
-  const runtime = useRef<WasmProver | undefined>(undefined);
+  const runtime = useRef<SprWebProver | undefined>(undefined);
   const runId = useRef(0);
   const options = useRef<HTMLDialogElement>(null);
   const proofDialog = useRef<HTMLDialogElement>(null);
@@ -105,10 +105,8 @@ export function App(): React.ReactElement {
       }
       let instance = runtime.current;
       if (instance === undefined) {
-        instance = new WasmProver({
+        instance = new SprWebProver({
           keyBaseUrl: import.meta.env.VITE_ZOLANA_KEYS_URL ?? `${import.meta.env.BASE_URL}keys`,
-          // Required by the shared transport; this page calls proveRequest directly.
-          proverUrl: new URL("prove", location.href).href,
           threads,
           onMeasurement: (measurement) => {
             if (measurement.step === "key-fetch") setPhase("preparing");

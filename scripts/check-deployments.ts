@@ -1,8 +1,7 @@
 // Live read-only checks. No wallet, signer or transaction submission is used.
 import assert from "node:assert/strict";
 import { createSprClient } from "@heliuslabs/spr";
-import { address } from "@solana/kit";
-import { ZOLANA_PROGRAM_IDS } from "../packages/web-prover/src/protocol.ts";
+import { SHIELDED_POOL_PROGRAM_ID, USER_REGISTRY_PROGRAM_ID } from "@heliuslabs/spr/interface";
 import { deployments } from "../examples/wallet/src/deployments.ts";
 
 const genesis = {
@@ -18,7 +17,7 @@ for (const network of ["devnet", "mainnet"] as const) {
       solanaRpcUrl: process.env[`ZOLANA_${network.toUpperCase()}_RPC_URL`] ?? deployment.solanaRpcUrl,
     });
     assert.equal(await client.solanaRpc.getGenesisHash().send(), genesis[network]);
-    const programs = Object.values(ZOLANA_PROGRAM_IDS).map((id) => address(id));
+    const programs = [SHIELDED_POOL_PROGRAM_ID, USER_REGISTRY_PROGRAM_ID];
     const { value: accounts } = await client.solanaRpc.getMultipleAccounts(programs, { encoding: "base64" }).send();
     assert.equal(accounts.length, programs.length);
     for (const account of accounts) assert.equal(account?.executable, true);

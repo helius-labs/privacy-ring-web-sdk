@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SprWebProver } from "../src/index.js";
-import { WasmProver, type WorkerRequest, type WorkerFatal } from "../src/wasm-prover.js";
+import { type WorkerRequest, type WorkerFatal } from "../src/wasm-prover.js";
 import type { KeyProgress, Measurement } from "../src/measurement.js";
 import { TRANSFER_SHAPES } from "../src/shapes.js";
 import {
@@ -14,6 +14,7 @@ import {
   key,
   proveBase,
   proverTestHooks,
+  proverUrl,
   request,
 } from "./support/prover.js";
 
@@ -23,7 +24,7 @@ vi.mock("../src/key-digests.js", async (importOriginal) =>
 proverTestHooks();
 
 describe("prover lifecycle", () => {
-  it("starts its bundled worker automatically and exposes the product alias", async () => {
+  it("starts its bundled worker automatically", async () => {
     const { prover } = await fixture();
     expect(prover).toBeInstanceOf(SprWebProver);
     const result = await prover.proveRequest(body);
@@ -122,7 +123,7 @@ describe("fetch cancellation", () => {
     const input = "http://localhost:3001/other/prove";
     const init = { method: "POST", body };
 
-    await prover.createFetch()(input, init);
+    await prover.createFetch(proverUrl)(input, init);
 
     expect(fetch).toHaveBeenCalledWith(input, init);
     expect(TestWorker.instances).toHaveLength(0);
@@ -130,7 +131,7 @@ describe("fetch cancellation", () => {
 
   it("answers a proving key's own path locally", async () => {
     const { prover, fetch } = await fixture();
-    const response = await prover.createFetch()(endpoint, {
+    const response = await prover.createFetch(proverUrl)(endpoint, {
       method: "POST",
       body,
     });
@@ -145,7 +146,7 @@ describe("fetch cancellation", () => {
 
   it("answers the bare /prove from the key the body names", async () => {
     const { prover, fetch } = await fixture();
-    const response = await prover.createFetch()(`${proveBase}?api-key=secret`, {
+    const response = await prover.createFetch(proverUrl)(`${proveBase}?api-key=secret`, {
       method: "POST",
       body,
     });
@@ -167,7 +168,7 @@ describe("fetch cancellation", () => {
     ["the status route", `${proveBase}/status?jobId=1`],
   ])("refuses %s without proving or forwarding the witness", async (_, input) => {
     const { prover, fetch } = await fixture();
-    const response = await prover.createFetch()(input, { method: "POST", body });
+    const response = await prover.createFetch(proverUrl)(input, { method: "POST", body });
 
     expect(response.status).toBe(500);
     expect(await response.json()).toMatchObject({ code: "wasm_invalid_request" });
@@ -178,7 +179,7 @@ describe("fetch cancellation", () => {
   it("refuses a merge wider than the browser proves, before any key fetch", async () => {
     const { prover, fetch } = await fixture();
     const wide = JSON.stringify({ circuitType: "merge", inputs: Array.from({ length: 52 }, () => ({})) });
-    const response = await prover.createFetch()(proveBase, { method: "POST", body: wide });
+    const response = await prover.createFetch(proverUrl)(proveBase, { method: "POST", body: wide });
 
     expect(response.status).toBe(500);
     expect(await response.json()).toMatchObject({ code: "wasm_merge_too_wide" });
@@ -190,7 +191,7 @@ describe("fetch cancellation", () => {
   it("rejects a pre-aborted signal before any key fetch or worker work", async () => {
     const { prover, fetch } = await fixture();
     const signal = AbortSignal.abort();
-    await expect(prover.createFetch()(endpoint, { method: "POST", body, signal })).rejects.toBe(
+    await expect(prover.createFetch(proverUrl)(endpoint, { method: "POST", body, signal })).rejects.toBe(
       signal.reason,
     );
     expect(fetch).not.toHaveBeenCalled();
@@ -206,7 +207,7 @@ describe("fetch cancellation", () => {
     await vi.waitFor(() => expect(worker.requests.some((r) => r.kind === "prove")).toBe(true));
     const controller = new AbortController();
     const queued = failure(
-      prover.createFetch()(endpoint, { method: "POST", body, signal: controller.signal }),
+      prover.createFetch(proverUrl)(endpoint, { method: "POST", body, signal: controller.signal }),
     );
     controller.abort();
     expect(await queued).toBe(controller.signal.reason);
@@ -228,7 +229,7 @@ describe("fetch cancellation", () => {
       worker.hold = kind;
       const controller = new AbortController();
       const pending = failure(
-        prover.createFetch()(
+        prover.createFetch(proverUrl)(
           new Request(endpoint, { method: "POST", body, signal: controller.signal }),
         ),
       );
@@ -259,7 +260,7 @@ describe("fetch cancellation", () => {
       return normalFetch(input, init);
     });
     const pending = failure(
-      prover.createFetch()(endpoint, { method: "POST", body, signal: controller.signal }),
+      prover.createFetch(proverUrl)(endpoint, { method: "POST", body, signal: controller.signal }),
     );
     await vi.waitFor(() => expect(downloadSignal).toBeDefined());
     controller.abort();
@@ -300,7 +301,7 @@ describe("fetch cancellation", () => {
     const { prover } = await fixture();
     await prover.start(factory);
     const req = new Request(endpoint, { method: "POST", body, signal: AbortSignal.abort() });
-    expect((await prover.createFetch()(req, { signal: null })).status).toBe(200);
+    expect((await prover.createFetch(proverUrl)(req, { signal: null })).status).toBe(200);
     prover.terminate();
   });
 });
@@ -326,7 +327,7 @@ describe("witness privacy", () => {
       expect(error).toMatchObject({ name: "WasmProverError" });
       expect(String(error)).not.toContain(sentinel);
       expect(error).not.toHaveProperty("cause");
-      const response = await prover.createFetch()(endpoint, { method: "POST", body });
+      const response = await prover.createFetch(proverUrl)(endpoint, { method: "POST", body });
       expect(response.status).toBe(500);
       const responseBody = await response.json();
       expect(responseBody).toMatchObject({ code: expect.stringMatching(/^wasm_/) });

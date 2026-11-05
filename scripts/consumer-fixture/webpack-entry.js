@@ -9,7 +9,6 @@ window.checkPackedProver = async () => {
   for (const threads of threadCounts) {
     const prover = new SprWebProver({
       keyBaseUrl: "/keys",
-      proverUrl: location.origin + "/local",
       threads,
     });
     try {

@@ -36,7 +36,7 @@ it("refuses limits no pinned key holds", () => {
 
 it("lists every pinned transfer and merge key, smallest first, so the first fit is the cheapest", async () => {
   const { KEY_DIGESTS } = await import("../src/key-digests.js");
-  const { MERGE_SHAPE, MERGE_SHAPES, TRANSFER_SHAPES, canonicalShape } = await import("../src/shapes.js");
+  const { MERGE_SHAPES, TRANSFER_SHAPES, canonicalShape } = await import("../src/shapes.js");
   const listed = [...TRANSFER_SHAPES, ...MERGE_SHAPES].map((shape) => shape.keyFile).sort();
   // Every pinned key but the merges wider than the browser proves.
   expect(listed).toEqual(Object.keys(KEY_DIGESTS).filter((name) => name !== "merge_52_1.key").sort());
@@ -46,7 +46,7 @@ it("lists every pinned transfer and merge key, smallest first, so the first fit 
     expect(sizes).toEqual([...sizes].sort((a, b) => a - b));
     expect(sizes.every((size, index) => index === 0 || sizes[index - 1] !== size)).toBe(true);
   }
-  expect(MERGE_SHAPE.keyFile).toBe("merge_8_1.key");
+  expect(MERGE_SHAPES[0]!.keyFile).toBe("merge_8_1.key");
   expect(canonicalShape(2, 2).keyFile).toBe("transfer_confidential_2_2.key");
   expect(canonicalShape(3, 3).keyFile).toBe("transfer_confidential_3_4.key");
 });
