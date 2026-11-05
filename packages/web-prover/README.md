@@ -1,11 +1,11 @@
-# @heliuslabs/zolana-web-prover
+# @heliuslabs/spr-web-prover
 
 Local Groth16 proving in a browser worker. No protocol SDK or Solana dependencies — transaction building stays in your app (see the [wallet example](https://github.com/helius-labs/zolana-web-sdk/tree/main/examples/wallet)).
 
 ## Install
 
 ```sh
-npm install @heliuslabs/zolana-web-prover
+npm install @heliuslabs/spr-web-prover
 ```
 
 Use a bundler that emits `new URL(..., import.meta.url)` assets and nested module workers (Vite and webpack 5 work; plain esbuild/Rollup usually do not). Keys load from the Zolana key CDN on first use and are checked against digests shipped in the package.
@@ -38,9 +38,9 @@ Prove from an extension page (not the service worker). For threaded proving, set
 ## Prove locally
 
 ```ts
-import { ZolanaWebProver, WasmProverError } from "@heliuslabs/zolana-web-prover";
+import { SprWebProver, WasmProverError } from "@heliuslabs/spr-web-prover";
 
-const prover = new ZolanaWebProver({
+const prover = new SprWebProver({
   proverUrl: "http://127.0.0.1:3001",
 });
 
@@ -54,7 +54,7 @@ try {
 }
 ```
 
-`proveRequest` takes a `/prove` JSON body and returns proof JSON after local verification. Supports `@heliuslabs/zolana` 0.8.0-alpha transfers and merges of up to 24 notes (`MAX_BROWSER_MERGE_INPUTS`). Each proof includes `provingKeySha256` for the SDK’s key pin check. If a GPU proof fails verification, the same request is retried on the CPU.
+`proveRequest` takes a `/prove` JSON body and returns proof JSON after local verification. Supports `@heliuslabs/spr` 0.9.0-alpha transfers and merges of up to 24 notes (`MAX_BROWSER_MERGE_INPUTS`). Each proof includes `provingKeySha256` for the SDK’s key pin check. If a GPU proof fails verification, the same request is retried on the CPU.
 
 ### With `@heliuslabs/spr`
 
@@ -87,7 +87,7 @@ Pass `prover.createFetch()` as `fetch`, set `proofDataSource: "client"`, and use
 ## Self-host keys
 
 ```sh
-npx --no-install zolana-prover-keys --output public/keys --keys transfer_confidential_1_2.key,transfer_confidential_2_2.key
+npx --no-install spr-prover-keys --output public/keys --keys transfer_confidential_1_2.key,transfer_confidential_2_2.key
 ```
 
 Pass `keyBaseUrl` (for example `"/keys"`). Names must appear in the pinned key set; files install as `<name>.zopro` and are size/SHA-256 checked. For a local mirror, set `ZOLANA_KEYS_BASE_URL` to a `file:///.../` directory.
@@ -100,7 +100,7 @@ Keys are tens to hundreds of MB; a loaded key needs more working memory. Only on
 it through your application's chosen source, or bundle a snapshot:
 
 ```ts
-const prover = new ZolanaWebProver({
+const prover = new SprWebProver({
   proverUrl: "http://127.0.0.1:3001",
   keyCatalog: catalog,
 });
@@ -116,6 +116,46 @@ report the gnark digest as `provingKeySha256`.
 The prover never fetches a catalog or policy itself. Omit `keyCatalog` to use the
 bundled URLs. See [UPSTREAM.md](../../UPSTREAM.md) for manifest provenance and
 sync instructions.
+
+## Runtime key updates
+
+`keySource` accepts an authenticated `ProvingKeySet` from protocol SDK
+`0.9.0-alpha` or later. It can replace the bundled checksums for compatible
+confidential signer transfers and merges; a raw `keyCatalog` cannot.
+
+```ts
+import { SignedTeePolicy, SprClient } from "@heliuslabs/spr/client";
+import { SprWebProver } from "@heliuslabs/spr-web-prover";
+
+const provingKeys = await new SprClient({
+  proverUrl: "https://your-prover.example/v1/spr",
+  proverTee: SignedTeePolicy.forNetwork("devnet"),
+}).fetchProvingKeySet();
+const proverUrl = "http://127.0.0.1:3001";
+const prover = new SprWebProver({ proverUrl, keySource: provingKeys });
+const client = new SprClient({
+  solanaRpcUrl: "https://your-solana-rpc.example",
+  indexerUrl: "https://your-photon.example",
+  proverUrl,
+  proofDataSource: "client",
+  provingKeys,
+  fetch: prover.createFetch(),
+});
+```
+
+The prover must serve the runtime metadata and match the on-chain verifier.
+One instance keeps one snapshot; download a fresh set and create new instances
+between runs. Downloads, sizes, checksums and worker key identities come from
+that snapshot. Runtime generations have separate caches and do not delete each
+other; use `clearKeys()` on an obsolete instance to reclaim its files.
+Use `prover.provingKeys()` for current file sizes; `ShapeKey.keyBytes` describes
+the bundled key set.
+
+`keySource`, `keyCatalog` and `keyBaseUrl` are mutually exclusive. A custom
+`ProvingKeySource` is an explicit trust decision by the application: authenticate
+and approve its metadata before passing it in. New proof-input layouts, circuits
+or solver features still need an SDK/runtime update. Old proofs must be rebuilt
+after their keys are replaced on chain.
 
 ## Prefetch
 

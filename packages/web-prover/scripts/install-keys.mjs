@@ -6,7 +6,7 @@ import { join, relative, resolve } from "node:path";
 import { existingFileMatches, loadAsset, verifyBytes, writeAtomically } from "./assets.mjs";
 import { KEY_BASE_URL, KEY_DIGESTS } from "../key-digests.js";
 
-const usage = "Usage: zolana-prover-keys --output <directory> --keys name1.key,name2.key";
+const usage = "Usage: spr-prover-keys --output <directory> --keys name1.key,name2.key";
 const argumentsList = process.argv.slice(2);
 const argumentsMap = new Map();
 for (let index = 0; index < argumentsList.length; index += 2) {

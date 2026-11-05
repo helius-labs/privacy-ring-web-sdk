@@ -7,7 +7,7 @@
  * recognizes the prover URL and answers it from wasm instead of the network.
  * Everything else -- indexer calls, Solana RPC -- falls through untouched.
  *
- * The runtime is zopro-zolana built for the browser: Zolana's request and
+ * The runtime is zopro-spr built for the browser: Zolana's request and
  * proof formats, gnark's keys repacked as zopro key files.
  */
 
@@ -18,7 +18,7 @@ export { WasmProverError } from "./errors.js";
 import { KeyStore, type KeyBytes, type KeyDigest, type ProvingKeyStatus } from "./key-store.js";
 import { automaticProvingThreads } from "./proving-threads.js";
 import { createProverFetch } from "./prover-fetch.js";
-import type { ProvingKeyCatalog } from "./key-catalog.js";
+import type { ProvingKeyCatalog, ProvingKeySource } from "./key-catalog.js";
 import { isWideMerge, proofRequestShape } from "./proof-requests.js";
 import { type ShapeKey } from "./shapes.js";
 
@@ -66,7 +66,7 @@ export interface WasmProverOptions {
   /**
    * Where proving keys are fetched from. Omit it to use the pinned key set on
    * the Zolana CDN, which serves them with CORS; set it to self-host or mirror
-   * them, as `zolana-prover-keys` installs.
+   * them, as `spr-prover-keys` installs.
    */
   readonly keyBaseUrl?: string;
   /**
@@ -76,6 +76,9 @@ export interface WasmProverOptions {
    * automatically and requires no TEE policy.
    */
   readonly keyCatalog?: ProvingKeyCatalog;
+  /** Trusted runtime keys from an authenticated source, such as `client.fetchProvingKeySet()`.
+   * Mutually exclusive with keyCatalog and keyBaseUrl. */
+  readonly keySource?: ProvingKeySource;
   /** The prover URL handed to the SDK; requests to it are intercepted. */
   readonly proverUrl: string;
   readonly fetch?: typeof globalThis.fetch;
@@ -148,6 +151,7 @@ export class WasmProver {
       fetch: this.#fetch,
       ...(options.keyBaseUrl === undefined ? {} : { keyBaseUrl: options.keyBaseUrl }),
       ...(options.keyCatalog === undefined ? {} : { keyCatalog: options.keyCatalog }),
+      ...(options.keySource === undefined ? {} : { keySource: options.keySource }),
       ...(options.persistStorage === undefined ? {} : { persistStorage: options.persistStorage }),
     });
   }
@@ -285,19 +289,19 @@ export class WasmProver {
     onProgress?: (progress: KeyProgress) => void,
   ): Promise<void> {
     await this.#ensureStarted(signal);
+    const expected = this.#store.digest(shape);
     if (this.#loaded.has(shape.keyFile)) {
       // Reported rather than returned silently: a second sweep would otherwise
       // show a passing run with no steps, which reads as a lost measurement.
       this.#options.onMeasurement?.({
         step: "key-load",
         ms: 0,
-        bytes: shape.keyBytes,
+        bytes: expected.size,
         note: `${shape.keyFile} already deserialized in this instance`,
       });
       return;
     }
 
-    const expected = this.#store.digest(shape);
     const progress = (stage: KeyProgress["stage"], loaded: number) => {
       const update = { keyFile: shape.keyFile, stage, loaded, total: expected.size };
       this.#options.onKeyProgress?.(update);
@@ -338,7 +342,7 @@ export class WasmProver {
     this.#options.onMeasurement?.({
       step: "key-load",
       ms: response.ms,
-      bytes: shape.keyBytes,
+      bytes: expected.size,
       note:
         info?.key === undefined
           ? shape.keyFile

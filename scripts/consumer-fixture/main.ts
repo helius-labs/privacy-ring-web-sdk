@@ -1,4 +1,5 @@
-import { ZolanaWebProver, WasmProverError, type Measurement } from "@heliuslabs/zolana-web-prover";
+import { SprWebProver, WasmProverError, type Measurement } from "@heliuslabs/spr-web-prover";
+export type { ProvingKeySource } from "@heliuslabs/spr-web-prover";
 
 declare global {
   interface Window {
@@ -15,7 +16,7 @@ window.checkPackedProver = async () => {
   // the fallback (threaded init refuses without SharedArrayBuffer).
   const threadCounts = crossOriginIsolated ? [0, 1, 2] : [0];
   for (const threads of threadCounts) {
-    const prover = new ZolanaWebProver({
+    const prover = new SprWebProver({
       keyBaseUrl: "/keys",
       proverUrl: location.origin + "/local",
       threads,

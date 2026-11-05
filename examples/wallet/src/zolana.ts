@@ -30,7 +30,7 @@ import {
   type KeyPairSigner,
   type Transaction,
 } from "@solana/kit";
-import { ZolanaWebProver, type Measurement } from "@heliuslabs/zolana-web-prover";
+import { SprWebProver, type Measurement } from "@heliuslabs/spr-web-prover";
 import { deployments, remoteProverConfig } from "./deployments";
 import { limitLocalProofs, localSpendLimit, MERGE_FIRST } from "./local-proving.js";
 export type { Payment };
@@ -59,7 +59,7 @@ type Client = Awaited<ReturnType<typeof createSprClient>>;
 export type PrivateTransaction = ReturnType<typeof getPrivateTransactions>[number];
 
 export interface Session {
-  readonly prover: ZolanaWebProver;
+  readonly prover: SprWebProver;
   readonly client: Client;
   readonly mergeClient: Client;
   readonly signer: KeyPairSigner;
@@ -84,7 +84,7 @@ export interface Snapshot {
  * `/prove/<key>` requests locally, and everything else goes to the network.
  */
 export async function openSession(seed: Uint8Array, onMeasurement: (m: Measurement) => void): Promise<Session> {
-  const prover = new ZolanaWebProver({
+  const prover = new SprWebProver({
     proverUrl: endpoints.proverUrl,
     onMeasurement,
   });

@@ -24,12 +24,12 @@ try {
   const metadata = JSON.parse(
     await command(
       "npm",
-      ["pack", "--json", "--workspace", "@heliuslabs/zolana-web-prover", "--pack-destination", consumer],
+      ["pack", "--json", "--workspace", "@heliuslabs/spr-web-prover", "--pack-destination", consumer],
       root,
       true,
     ),
   );
-  const packed = Array.isArray(metadata) ? metadata[0] : metadata["@heliuslabs/zolana-web-prover"];
+  const packed = Array.isArray(metadata) ? metadata[0] : metadata["@heliuslabs/spr-web-prover"];
   assert.ok(packed?.filename, "npm pack must identify the generated tarball");
   const tarball = join(consumer, packed.filename);
   const lock = JSON.parse(await readFile(join(root, "package-lock.json"), "utf8"));
@@ -40,14 +40,14 @@ try {
       name: "packed-prover-consumer",
       private: true,
       type: "module",
-      dependencies: { "@heliuslabs/zolana-web-prover": `file:${tarball}` },
+      dependencies: { "@heliuslabs/spr-web-prover": `file:${tarball}` },
       devDependencies: Object.fromEntries(
         ["typescript", "vite", "webpack"].map((name) => [name, lock.packages[`node_modules/${name}`].version]),
       ),
     }),
   );
   await command("npm", ["install", "--ignore-scripts", "--no-audit", "--no-fund"], consumer);
-  const installed = join(consumer, "node_modules/@heliuslabs/zolana-web-prover");
+  const installed = join(consumer, "node_modules/@heliuslabs/spr-web-prover");
   assert.equal((await lstat(installed)).isSymbolicLink(), false);
   const manifest = JSON.parse(await readFile(join(installed, "package.json"), "utf8"));
   for (const field of ["dependencies", "peerDependencies", "optionalDependencies"]) {
@@ -64,17 +64,17 @@ try {
   );
   // Both runtimes ship in the package as built, beside the worker the app's bundler emits.
   for (const [packaged, source] of [
-    ["dist/runtime/threads/zopro_zolana.js", "packages/web-prover/src/runtime/threads/zopro_zolana.js"],
-    ["dist/runtime/threads/zopro_zolana_bg.wasm", "packages/web-prover/src/runtime/threads/zopro_zolana_bg.wasm"],
-    ["dist/runtime/single/zopro_zolana.js", "packages/web-prover/src/runtime/single/zopro_zolana.js"],
-    ["dist/runtime/single/zopro_zolana_bg.wasm", "packages/web-prover/src/runtime/single/zopro_zolana_bg.wasm"],
+    ["dist/runtime/threads/zopro_spr.js", "packages/web-prover/src/runtime/threads/zopro_spr.js"],
+    ["dist/runtime/threads/zopro_spr_bg.wasm", "packages/web-prover/src/runtime/threads/zopro_spr_bg.wasm"],
+    ["dist/runtime/single/zopro_spr.js", "packages/web-prover/src/runtime/single/zopro_spr.js"],
+    ["dist/runtime/single/zopro_spr_bg.wasm", "packages/web-prover/src/runtime/single/zopro_spr_bg.wasm"],
     ["dist/scripts/install-keys.mjs", "packages/web-prover/scripts/install-keys.mjs"],
   ]) {
     assert.deepEqual(await readFile(join(installed, packaged)), await readFile(join(root, source)), packaged);
   }
   const publicDirectory = join(consumer, "public");
   await command(
-    join(consumer, "node_modules/.bin/zolana-prover-keys"),
+    join(consumer, "node_modules/.bin/spr-prover-keys"),
     ["--output", join(publicDirectory, "keys"), "--keys", "transfer_confidential_2_2.key"],
     consumer,
   );
@@ -104,8 +104,8 @@ try {
   );
   // Both bundlers emit each runtime's wasm as a file, not inlined.
   const runtimeSizes = [
-    (await readFile(join(installed, "dist/runtime/threads/zopro_zolana_bg.wasm"))).length,
-    (await readFile(join(installed, "dist/runtime/single/zopro_zolana_bg.wasm"))).length,
+    (await readFile(join(installed, "dist/runtime/threads/zopro_spr_bg.wasm"))).length,
+    (await readFile(join(installed, "dist/runtime/single/zopro_spr_bg.wasm"))).length,
   ].sort((a, b) => a - b);
   for (const outDir of ["dist", "dist-webpack"]) {
     const emitted = [];

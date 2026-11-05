@@ -14,6 +14,42 @@ export interface ProvingKeyCatalog {
   }>[];
 }
 
+/** Trusted release metadata, for example the protocol SDK's attested key set. */
+export interface ProvingKeySource {
+  readonly cacheKey: string;
+  key(name: string): Readonly<{
+    file: string;
+    size: number;
+    sha256: string;
+    keySha256: string;
+    url: string;
+  }>;
+}
+
+/** Snapshot the source once so a proof never mixes releases. */
+export function sourceKeys(source: ProvingKeySource): Readonly<{
+  cacheKey: string;
+  keys: ReadonlyMap<string, ReturnType<ProvingKeySource["key"]>>;
+}> {
+  const invalid = () => new WasmProverError("wasm_key_catalog_invalid");
+  if (source === null || typeof source !== "object" || typeof source.key !== "function") throw invalid();
+  const cacheKey = source.cacheKey;
+  if (typeof cacheKey !== "string" || !/^[0-9a-f]{64}$/u.test(cacheKey)) throw invalid();
+  const keys = new Map<string, ReturnType<ProvingKeySource["key"]>>();
+  for (const name of Object.keys(KEY_DIGESTS)) {
+    let entry: ReturnType<ProvingKeySource["key"]>;
+    try { entry = source.key(name); } catch { throw invalid(); }
+    if (entry === null || typeof entry !== "object" || entry.file !== name.replace(/\.key$/u, ".zopro")
+      || !Number.isSafeInteger(entry.size) || entry.size < 1 || entry.size > 0xffff_ffff
+      || typeof entry.sha256 !== "string" || !/^[0-9a-f]{64}$/u.test(entry.sha256)
+      || typeof entry.keySha256 !== "string" || !/^[0-9a-f]{64}$/u.test(entry.keySha256)
+      || typeof entry.url !== "string") throw invalid();
+    keys.set(name, Object.freeze({ file: entry.file, size: entry.size, sha256: entry.sha256,
+      keySha256: entry.keySha256, url: checkedUrl(entry.url) }));
+  }
+  return { cacheKey, keys };
+}
+
 /** Select URLs only for conversions whose bytes and source key we already pin. */
 export function catalogKeyUrls(catalog: unknown): ReadonlyMap<string, string> {
   const invalid = () => new WasmProverError("wasm_key_catalog_invalid");
@@ -46,20 +82,18 @@ export function catalogKeyUrls(catalog: unknown): ReadonlyMap<string, string> {
     if (artifact["sha256"] !== pinned.sha256 || artifact["size"] !== pinned.size)
       throw new WasmProverError("wasm_key_digest_mismatch");
     if (typeof artifact["url"] !== "string") throw invalid();
-    let url: URL;
-    try {
-      url = new URL(artifact["url"]);
-    } catch {
-      throw invalid();
-    }
-    const loopback =
-      url.hostname === "localhost" || url.hostname.endsWith(".localhost") ||
-      url.hostname === "127.0.0.1" || url.hostname === "[::1]";
-    if (
-      (url.protocol !== "https:" && !(url.protocol === "http:" && loopback)) ||
-      url.username !== "" || url.password !== "" || url.hash !== ""
-    ) throw invalid();
-    urls.set(name, url.href);
+    urls.set(name, checkedUrl(artifact["url"]));
   }
   return urls;
+}
+
+function checkedUrl(value: string): string {
+  const invalid = () => new WasmProverError("wasm_key_catalog_invalid");
+  let url: URL;
+  try { url = new URL(value); } catch { throw invalid(); }
+  const loopback = url.hostname === "localhost" || url.hostname.endsWith(".localhost")
+    || url.hostname === "127.0.0.1" || url.hostname === "[::1]";
+  if ((url.protocol !== "https:" && !(url.protocol === "http:" && loopback))
+    || url.username !== "" || url.password !== "" || url.hash !== "") throw invalid();
+  return url.href;
 }

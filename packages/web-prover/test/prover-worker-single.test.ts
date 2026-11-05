@@ -26,7 +26,7 @@ let single: {
   default: ReturnType<typeof vi.fn>;
   init_gpu: ReturnType<typeof vi.fn>;
   raw_format: ReturnType<typeof vi.fn>;
-  ZolanaProver: ReturnType<typeof vi.fn> & { from_vectors: ReturnType<typeof vi.fn> };
+  SprProver: ReturnType<typeof vi.fn> & { from_vectors: ReturnType<typeof vi.fn> };
 };
 
 beforeEach(async () => {
@@ -43,7 +43,7 @@ beforeEach(async () => {
     outputs: vi.fn(() => 2),
     export_raw: vi.fn(() => new Uint8Array(0)),
   };
-  const ZolanaProver = Object.assign(
+  const SprProver = Object.assign(
     vi.fn(() => {
       throw new Error("constructor must not load a key file on the single path");
     }),
@@ -53,7 +53,7 @@ beforeEach(async () => {
     default: vi.fn(async () => {}),
     init_gpu: vi.fn(async () => {}),
     raw_format: vi.fn(() => "raw-test"),
-    ZolanaProver,
+    SprProver,
   };
   importSingleRuntime.mockResolvedValue(single);
   importThreadedRuntime.mockRejectedValue(new Error("threaded runtime unused"));
@@ -102,13 +102,13 @@ it("decompresses a key file across workers before from_vectors", async () => {
   });
   expect(response.ok).toBe(true);
   expect(decodeKey).toHaveBeenCalledOnce();
-  expect(single.ZolanaProver.from_vectors).toHaveBeenCalledOnce();
-  expect(single.ZolanaProver).not.toHaveBeenCalled();
+  expect(single.SprProver.from_vectors).toHaveBeenCalledOnce();
+  expect(single.SprProver).not.toHaveBeenCalled();
 });
 
 it("loads a raw key through the constructor", async () => {
   expect((await send({ id: 1, kind: "init", threads: 0 })).ok).toBe(true);
-  single.ZolanaProver.mockImplementation(function () {
+  single.SprProver.mockImplementation(function () {
     return prover;
   });
   const raw = Uint8Array.from([...new TextEncoder().encode("zopro-raw3"), 0, 0, 0, 0, 0, 0]);
@@ -122,6 +122,6 @@ it("loads a raw key through the constructor", async () => {
   });
   expect(response.ok).toBe(true);
   expect(decodeKey).not.toHaveBeenCalled();
-  expect(single.ZolanaProver).toHaveBeenCalledOnce();
-  expect(single.ZolanaProver.from_vectors).not.toHaveBeenCalled();
+  expect(single.SprProver).toHaveBeenCalledOnce();
+  expect(single.SprProver.from_vectors).not.toHaveBeenCalled();
 });

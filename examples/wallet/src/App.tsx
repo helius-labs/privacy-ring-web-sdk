@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { formatAmount, parseAmount } from "@heliuslabs/spr";
 import { address, isAddress } from "@solana/kit";
-import { shapeByLabel, type KeyProgress, type Measurement } from "@heliuslabs/zolana-web-prover";
+import { shapeByLabel, type KeyProgress, type Measurement } from "@heliuslabs/spr-web-prover";
 
 import { loadBurnerSeed, resetBurner } from "./burner.js";
 import { actions, network, networkLabel, openSession, snapshot, type PrivateTransaction, type Session, type Snapshot } from "./zolana.js";

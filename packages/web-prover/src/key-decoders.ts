@@ -16,7 +16,7 @@ export type DecodeResponse = Readonly<{ id: number; ok: boolean; points?: ArrayB
 
 /**
  * The five vectors of `key` (a key file) decompressed by `count` workers from
- * `spawn`, in order, as `ZolanaProver.from_vectors` takes them. Every worker
+ * `spawn`, in order, as `SprProver.from_vectors` takes them. Every worker
  * ends when this settles.
  */
 export async function decodeKey(
