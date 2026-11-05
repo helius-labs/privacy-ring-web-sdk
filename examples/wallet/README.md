@@ -1,6 +1,6 @@
 # Private wallet with local proving and TEE merges
 
-A private wallet on devnet-e using SDK 0.8.0-alpha. Transfers and withdrawals are proved in the browser with at most eight input notes. If a payment, including its app fee, needs more notes, merge them through the TEE first.
+A private wallet on devnet-e using the `@heliuslabs/spr` release [`upstream.lock.json`](../../upstream.lock.json) pins. Transfers and withdrawals are proved in the browser with at most eight input notes. If a payment, including its app fee, needs more notes, merge them through the TEE first.
 
 The whole integration is in [`src/zolana.ts`](src/zolana.ts):
 

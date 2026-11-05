@@ -1,15 +1,16 @@
 # Upstream
 
-`upstream.lock.json` pins protocol SDK 0.8.0-alpha at release tag
-`ts-sdk-v0.8.0-alpha`, source `6bb4f7008294695ebe614f08affb215d4321a538`
-([#521](https://github.com/helius-labs/zolana/pull/521)). CI also builds and packs
-this exact commit to check wallet compatibility. Local clients select
+`upstream.lock.json` pins the protocol SDK release: its version, release tag and
+source commit. The wallet example installs that version of `@heliuslabs/spr` from
+npm, and `scripts/check-upstream.sh` fails unless the tag and the published
+package both name the pinned commit. Local clients select
 `proofDataSource: "client"`; remote merge clients use the SDK's signed policies
 and `/v1/spr`, `/attestation`, `Spr-Tee*` protocol.
 
-`key-catalog-source.json` pins the reviewed upstream `zopro-keys.lock` by commit
-and SHA-256. `python3 scripts/sync-key-catalog.py` copies that manifest into this
-repository, adding its CDN base URL; `--check` fails on drift. CI checks it and
+`key-catalog-source.json` pins the SHA-256 of the reviewed upstream
+`zopro-keys.lock` at the `upstream.lock.json` commit. `python3
+scripts/sync-key-catalog.py` copies that manifest into this repository, adding
+its CDN base URL; `--check` fails on drift. CI checks it and
 compares each `key_sha256` with the protocol release's gnark pin and installed
 SDK. Set `ZOLANA_SRC` to use an existing upstream Git checkout for these checks.
 
@@ -25,7 +26,7 @@ checksums and sizes match the bundled pins. It neither adds supported circuits
 nor replaces the trusted conversion manifest.
 
 The optional `keySource` API accepts the authenticated `ProvingKeySet` returned
-by `@heliuslabs/spr` 0.9.0-alpha's `fetchProvingKeySet()`. This needs a prover
+by the pinned `@heliuslabs/spr`'s `fetchProvingKeySet()`. This needs a prover
 generation that serves runtime key sets (zolana #527). It does not change the
 bundled default pins or the example's protocol dependency. Runtime rotations must
 preserve the proof-input contract and use solver features this pinned runtime
