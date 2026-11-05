@@ -455,8 +455,8 @@ async function readKey(
   size: number,
   downloaded?: (loaded: number) => void,
 ): Promise<ArrayBuffer> {
-  const reader = downloaded === undefined ? undefined : response.body?.getReader();
-  if (reader === undefined) return response.arrayBuffer();
+  const reader = response.body?.getReader();
+  if (reader === undefined) return new ArrayBuffer(0);
   const bytes = new Uint8Array(size);
   let loaded = 0;
   for (;;) {

@@ -377,8 +377,9 @@ export class WasmProver {
 
   /**
    * A `fetch` for `SprClientConfig.fetch`. Proof requests to `/prove/<key>`
-   * are answered by the runtime, other paths below `/prove` are refused, and
-   * everything else is delegated, so one shim covers the client.
+   * are answered by the runtime, other paths below `/prove` and proof requests
+   * for any other URL are refused, and everything else is delegated, so one
+   * shim covers the client.
    */
   createFetch(): typeof globalThis.fetch {
     return createProverFetch({
