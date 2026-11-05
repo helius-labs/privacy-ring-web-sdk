@@ -7,8 +7,8 @@
 # cross-origin isolated page, and single/ without, for any other page, where
 # SharedArrayBuffer is missing. A runtime already built from the pinned
 # revision is kept. ZOPRO_DIR builds from a checkout instead of a clone; the
-# manifest records its revision. The request fixtures are staged for the
-# example page and the proof timing harness.
+# manifest records its revision. wasm-bindgen must be on PATH at the pinned
+# version.
 #
 # Without LTO: zopro-core's SIMD assembly does not assemble with simd128 in
 # an rlib built for LTO.
@@ -22,7 +22,6 @@ out="$root/packages/web-prover/src/runtime"
 # The single-thread build's flags, in place of zopro-spr's .cargo/config.toml,
 # which asks for atomics and shared memory.
 single_rustflags="-C target-feature=+bulk-memory,+mutable-globals,+simd128 -C link-arg=--max-memory=4294967296"
-fixtures="$root/examples/browser/public/fixtures"
 
 # Whether $out holds exactly the files its manifest lists, built from the pins.
 current() {
@@ -72,12 +71,11 @@ build() {
     zopro="$zopro/$(pin zopro.path)"
   fi
   target="${CARGO_TARGET_DIR:-$root/target/zopro-wasm}"
-  bindgen="$(command -v wasm-bindgen || true)"
-  if [[ -z "$bindgen" || "$("$bindgen" --version)" != "wasm-bindgen $bindgen_version" ]]; then
-    bindgen="$HOME/Library/Caches/.wasm-pack/wasm-bindgen-cargo-install-$bindgen_version/wasm-bindgen"
-  fi
-  if [[ ! -x "$bindgen" ]]; then
-    echo "wasm-bindgen $bindgen_version is required (cargo install wasm-bindgen-cli --version $bindgen_version)" >&2
+  local found
+  found="$(wasm-bindgen --version 2>/dev/null || echo "no wasm-bindgen on PATH")"
+  if [[ "$found" != "wasm-bindgen $bindgen_version" ]]; then
+    echo "wasm-bindgen $bindgen_version is required on PATH, found: $found" >&2
+    echo "Install it with: cargo install wasm-bindgen-cli --version $bindgen_version --locked" >&2
     exit 1
   fi
   compile threads "$target" ""
@@ -149,7 +147,7 @@ compile() {
       rustup run "$rust_toolchain" cargo rustc --release --locked --target wasm32-unknown-unknown \
       --crate-type cdylib --features wgpu
   )
-  "$bindgen" --target web --out-name zopro_spr --out-dir "$work/bindgen/$variant" \
+  wasm-bindgen --target web --out-name zopro_spr --out-dir "$work/bindgen/$variant" \
     "$target/wasm32-unknown-unknown/release/zopro_spr.wasm"
 }
 
@@ -171,5 +169,3 @@ if [[ -z "${ZOPRO_DIR:-}" ]] && current; then
 else
   build
 fi
-mkdir -p "$fixtures"
-install -m 644 "$root"/fixtures/*.json "$fixtures/"

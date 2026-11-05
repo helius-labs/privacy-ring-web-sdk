@@ -24,9 +24,9 @@ import {
   type KeyPairSigner,
 } from "@solana/kit";
 import { getTransferSolInstruction } from "@solana-program/system";
-import { Builder, By, logging, until, type WebDriver, type WebElement } from "selenium-webdriver";
-import chrome from "selenium-webdriver/chrome.js";
+import { By, logging, until, type WebDriver, type WebElement } from "selenium-webdriver";
 import { createServer } from "vite";
+import { startChrome } from "../../../scripts/browser.ts";
 
 const rpcUrl = process.env["VITE_SOLANA_RPC_URL"];
 const funderPath = process.env["ZOLANA_E2E_FUNDER"];
@@ -101,15 +101,10 @@ const seedHex = Array.from(seed, (byte) => byte.toString(16).padStart(2, "0")).j
 
 const server = await createServer({ root: fileURLToPath(new URL("../", import.meta.url)), logLevel: "warn" });
 await server.listen();
-const preferences = new logging.Preferences();
-preferences.setLevel(logging.Type.BROWSER, logging.Level.ALL);
-preferences.setLevel(logging.Type.PERFORMANCE, logging.Level.ALL);
-const options = new chrome.Options();
-options.addArguments("--headless", "--window-size=1200,1400");
-options.setLoggingPrefs(preferences);
-if (process.env["CHROME_BIN"]) options.setChromeBinaryPath(process.env["CHROME_BIN"]);
-if (process.env["CHROME_NO_SANDBOX"] === "1") options.addArguments("--no-sandbox");
-const driver = await new Builder().forBrowser("chrome").setChromeOptions(options).build();
+const driver = await startChrome({
+  window: { width: 1200, height: 1400 },
+  logs: [logging.Type.BROWSER, logging.Type.PERFORMANCE],
+});
 let funded = false;
 
 try {

@@ -33,25 +33,28 @@ if [[ -z "$source_dir" ]]; then
   git -C "$source_dir" fetch -q --depth=1 --filter=blob:none origin "$revision"
 fi
 upstream() { git -C "$source_dir" show "$revision:$1"; }
+# The browser's key names, which the package defines.
+key_names="$root/packages/web-prover/src/key-names.ts"
 
 upstream_keys="$(mktemp "${TMPDIR:-/tmp}/zolana-keys.XXXXXX")"
 upstream prover/server/prover/provingkeys/proving-keys.lock > "$upstream_keys"
-python3 - "$root/zopro-keys.lock" "$upstream_keys" <<'PY' || failed=1
-import json, re, sys
-zopro_path, upstream_path = sys.argv[1:]
-zopro = json.load(open(zopro_path))
-upstream = json.load(open(upstream_path))
-browser = re.compile(r"transfer_confidential_\d+_\d+\.key|merge_\d+_1\.key")
-ok = True
-def fail(m):
-    global ok; ok = False; print("drift:", m, file=sys.stderr)
-wanted = {k for k in upstream["keys"] if browser.fullmatch(k)}
-for k in sorted(wanted - set(zopro["keys"])): fail(f"upstream pins {k}, zopro-keys.lock has no zopro key for it")
-for k, entry in sorted(zopro["keys"].items()):
-    if k not in upstream["keys"]: fail(f"zopro-keys.lock has {k}, absent upstream"); continue
-    if entry["key_sha256"] != upstream["keys"][k]["sha256"]: fail(f"{k}'s zopro key was built from gnark key {entry['key_sha256']}, upstream pins {upstream['keys'][k]['sha256']}")
-sys.exit(0 if ok else 1)
-PY
+node --input-type=module - "$key_names" "$root/zopro-keys.lock" "$upstream_keys" <<'JS' || failed=1
+import { readFileSync } from "node:fs";
+const [names, zoproPath, upstreamPath] = process.argv.slice(2);
+const { browserKeyCircuit } = await import(names);
+const zopro = JSON.parse(readFileSync(zoproPath, "utf8")).keys;
+const upstream = JSON.parse(readFileSync(upstreamPath, "utf8")).keys;
+let ok = true;
+const fail = (message) => { console.error(`drift: ${message}`); ok = false; };
+for (const name of Object.keys(upstream).sort()) {
+  if (browserKeyCircuit(name) !== undefined && !(name in zopro)) fail(`upstream pins ${name}, zopro-keys.lock has no zopro key for it`);
+}
+for (const [name, entry] of Object.entries(zopro).sort(([a], [b]) => a.localeCompare(b))) {
+  if (!(name in upstream)) fail(`zopro-keys.lock has ${name}, absent upstream`);
+  else if (entry.key_sha256 !== upstream[name].sha256) fail(`${name}'s zopro key was built from gnark key ${entry.key_sha256}, upstream pins ${upstream[name].sha256}`);
+}
+process.exit(ok ? 0 : 1);
+JS
 rm -f "$upstream_keys"
 
 # The wallet example's SDK is the pinned release, and it expects the gnark keys
@@ -71,14 +74,15 @@ installed="$root/node_modules/@heliuslabs/spr"
 if [[ "$pinned" == "$sdk" && -d "$installed" ]]; then
   got="$(json "$installed/package.json" version)"
   [[ "$got" == "$sdk" ]] || fail "installed @heliuslabs/spr is $got, upstream.lock.json says $sdk"
-  node --input-type=module - "$installed/dist/interface/proving-keys.js" "$root/zopro-keys.lock" <<'JS' || failed=1
+  node --input-type=module - "$key_names" "$installed/dist/interface/proving-keys.js" "$root/zopro-keys.lock" <<'JS' || failed=1
 import { readFileSync } from "node:fs";
-const [file, lock] = process.argv.slice(2);
+const [names, file, lock] = process.argv.slice(2);
+const { browserKeyCircuit } = await import(names);
 const sdk = (await import(file)).PROVING_KEY_SHA256S;
 const keys = JSON.parse(readFileSync(lock, "utf8")).keys;
 let ok = true;
 for (const [name, sha256] of Object.entries(sdk)) {
-  if (!/^(transfer_confidential_\d+_\d+|merge_\d+_1)\.key$/.test(name)) continue;
+  if (browserKeyCircuit(name) === undefined) continue;
   if (!(name in keys)) { console.error(`drift: the SDK pins ${name}, absent from zopro-keys.lock`); ok = false; }
   else if (keys[name].key_sha256 !== sha256) { console.error(`drift: the SDK pins ${name} at ${sha256}, its zopro key was built from ${keys[name].key_sha256}`); ok = false; }
 }
