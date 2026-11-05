@@ -3,14 +3,13 @@ import { abortable } from "./abortable.js";
 
 /**
  * A request to the prover's `/prove`. A proof goes to its proving key's own
- * `/prove/<key>`, `<key>` being the key file name without `.key`, or, on the
- * Helius gateway, which routes only the key-less path, to the bare `/prove`
- * with the key named in the body. Every other path below `/prove`, such as
- * `/prove/<key>/indexed` or `/prove/<key>/status`, is `unsupported`: it can
- * carry a witness too, so it is never forwarded.
+ * `/prove/<key>`, `<key>` being the key file name without `.key`. Every other
+ * path at or below `/prove`, such as the bare `/prove`, `/prove/<key>/indexed`
+ * or `/prove/<key>/status`, is `unsupported`: it can carry a witness too, so it
+ * is never forwarded.
  */
 export type ProveRoute =
-  | Readonly<{ kind: "prove"; keyFile?: string }>
+  | Readonly<{ kind: "prove"; keyFile: string }>
   | Readonly<{ kind: "unsupported" }>;
 
 /** How `url` addresses the prover at `proverUrl`; undefined if it is not a proving route. */
@@ -18,10 +17,9 @@ export function proveRoute(url: URL, proverUrl: string): ProveRoute | undefined 
   const endpoint = new URL(proverUrl);
   const prove = `${endpoint.pathname.replace(/\/+$/u, "")}/prove`;
   if (url.origin !== endpoint.origin) return undefined;
-  if (url.pathname === prove) return { kind: "prove" };
-  if (!url.pathname.startsWith(`${prove}/`)) return undefined;
+  if (url.pathname !== prove && !url.pathname.startsWith(`${prove}/`)) return undefined;
   // A key segment is a key file name without `.key`, which always ends in its
-  // shape; `/prove/status`, the poll path, is not one.
+  // shape; the bare `/prove` and `/prove/status`, the poll path, have none.
   const key = url.pathname.slice(prove.length + 1);
   return /^[a-z0-9_-]+_\d+_\d+$/u.test(key)
     ? { kind: "prove", keyFile: `${key}.key` }

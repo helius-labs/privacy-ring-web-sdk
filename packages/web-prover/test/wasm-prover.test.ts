@@ -143,26 +143,9 @@ describe("fetch cancellation", () => {
     prover.terminate();
   });
 
-  it("answers the bare /prove from the key the body names", async () => {
-    const { prover, fetch } = await fixture();
-    const response = await prover.createFetch()(`${proveBase}?api-key=secret`, {
-      method: "POST",
-      body,
-    });
-
-    expect(response.status).toBe(200);
-    expect(await response.text()).toBe('{"proof":"test"}');
-    expect(fetch.mock.calls.map(([input]) => String(input))).not.toContain(
-      `${proveBase}?api-key=secret`,
-    );
-    expect(request(current(), "loadKey")).toMatchObject({
-      fileName: "transfer_confidential_2_2.key",
-    });
-    prover.terminate();
-  });
-
   it.each([
     ["another key's path", `${proveBase}/transfer_confidential_1_2`],
+    ["the bare /prove", `${proveBase}?api-key=secret`],
     ["the indexed route", `${endpoint}/indexed`],
     ["the status route", `${proveBase}/status?jobId=1`],
   ])("refuses %s without proving or forwarding the witness", async (_, input) => {
@@ -178,7 +161,7 @@ describe("fetch cancellation", () => {
   it("refuses a merge wider than the browser proves, before any key fetch", async () => {
     const { prover, fetch } = await fixture();
     const wide = JSON.stringify({ circuitType: "merge", inputs: Array.from({ length: 52 }, () => ({})) });
-    const response = await prover.createFetch()(proveBase, { method: "POST", body: wide });
+    const response = await prover.createFetch()(`${proveBase}/merge_52_1`, { method: "POST", body: wide });
 
     expect(response.status).toBe(500);
     expect(await response.json()).toMatchObject({ code: "wasm_merge_too_wide" });
