@@ -1,8 +1,4 @@
-/**
- * A `fetch` for `SprClientConfig.fetch`: proof requests to `/prove/<key>`
- * are answered by the local prover, other paths below `/prove` are refused, and
- * everything else is delegated, so one shim covers the client.
- */
+/** The `fetch` shim behind `createFetch()`, which documents its routing. */
 
 import { abortable, rethrowAbort } from "./abortable.js";
 import { WasmProverError } from "./errors.js";
