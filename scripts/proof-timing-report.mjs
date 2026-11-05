@@ -94,6 +94,9 @@ export function report(lines) {
 }
 
 export const seconds = (ms) => `${(ms / 1000).toFixed(2)} s`;
+// A stage under a second, a witness of a few milliseconds, in milliseconds:
+// in seconds it would read 0.00 s.
+export const duration = (ms) => (Math.round(ms) < 1000 ? `${Math.round(ms)} ms` : seconds(ms));
 
 function change(now, before, flag) {
   if (before === undefined || before === 0 || now === undefined || Math.abs(now - before) < LEAST_CHANGE_MS) return "";
@@ -113,7 +116,7 @@ const scenarioText = (report, shape, row) => {
 };
 const stageText = (report, shape, stage) => {
   const now = report?.stages?.[shape]?.[stage];
-  return now === undefined ? "" : seconds(now);
+  return now === undefined ? "" : duration(now);
 };
 const total = (report, shape, row) => report?.cells?.[shape]?.[row]?.total_ms;
 const stageValue = (report, shape, stage) => report?.stages?.[shape]?.[stage];

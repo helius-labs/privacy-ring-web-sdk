@@ -5,22 +5,22 @@
 //
 //   ZOLANA_PROFILE_SHAPES=2x2,8x2 ZOLANA_PROFILE_THREADS=4 node examples/browser/scripts/gpu-profile.mjs
 import { fileURLToPath } from "node:url";
-import { Builder } from "selenium-webdriver";
-import chrome from "selenium-webdriver/chrome.js";
 import { createServer } from "vite";
+import { startChrome } from "../../../scripts/browser.ts";
+import { lockedKey } from "../../../scripts/locked-keys.ts";
 
-const shapes = (process.env.ZOLANA_PROFILE_SHAPES || "2x2,8x2,24x2").split(",");
+const shapes = (process.env.ZOLANA_PROFILE_SHAPES || "2x2,8x2,24x2").split(",").map((shape) => {
+  const { file, fixture } = lockedKey(shape);
+  return { shape, file, fixture };
+});
 const threads = Number(process.env.ZOLANA_PROFILE_THREADS || 4);
 const rounds = Number(process.env.ZOLANA_PROFILE_ROUNDS || 3);
 const root = fileURLToPath(new URL("../", import.meta.url));
-// The built package's runtime, which the dev server serves from the workspace.
-const runtime = `/@fs${fileURLToPath(new URL("../../../packages/web-prover/dist/runtime/", import.meta.url))}`;
+// The built package's threaded runtime, which the dev server serves from the workspace.
+const runtime = `/@fs${fileURLToPath(new URL("../../../packages/web-prover/dist/runtime/threads/", import.meta.url))}`;
 const server = await createServer({ root, logLevel: "warn", server: { port: 5179, strictPort: false } });
 await server.listen();
-const options = new chrome.Options().addArguments("--headless=new");
-if (process.env.CHROME_BIN) options.setChromeBinaryPath(process.env.CHROME_BIN);
-if (process.env.CHROME_NO_SANDBOX === "1") options.addArguments("--no-sandbox");
-const driver = await new Builder().forBrowser("chrome").setChromeOptions(options).build();
+const driver = await startChrome();
 try {
   await driver.get(server.resolvedUrls.local[0]);
   await driver.manage().setTimeouts({ script: 1800000 });
@@ -35,12 +35,9 @@ try {
             await m.initThreadPool(data.threads);
             m.gpu_profile(true);
             if (!(await m.init_gpu())) throw new Error("no WebGPU");
-            for (const shape of data.shapes) {
-              const merge = shape.startsWith("merge-");
-              const [i, o] = shape.replace("merge-", "").split("x");
-              const file = merge ? "merge_" + i + "_1" : "transfer_confidential_" + i + "_" + o;
-              const request = await (await fetch(data.base + "/fixtures/" + (merge ? shape : "transfer-" + shape) + ".json")).text();
-              const key = new Uint8Array(await (await fetch(data.base + "/keys/" + file + ".zopro")).arrayBuffer());
+            for (const { shape, file, fixture } of data.shapes) {
+              const request = await (await fetch(data.base + "/fixtures/" + fixture)).text();
+              const key = new Uint8Array(await (await fetch(data.base + "/keys/" + file)).arrayBuffer());
               const prover = new m.SprProver(key);
               await prover.prove(request);
               m.gpu_profile_report();

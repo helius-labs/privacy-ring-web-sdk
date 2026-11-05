@@ -6,8 +6,8 @@ import { tmpdir } from "node:os";
 import { isAbsolute, join, relative } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { Browser, install } from "@puppeteer/browsers";
-import { Builder, logging } from "selenium-webdriver";
-import chrome from "selenium-webdriver/chrome.js";
+import { logging } from "selenium-webdriver";
+import { startChrome } from "./browser.ts";
 
 const root = await realpath(fileURLToPath(new URL("../", import.meta.url)));
 // Pinned, so two runs of one commit test the same browser; ci.yml caches it by this id.
@@ -62,6 +62,12 @@ try {
     ["-p", "tsconfig.json", "--module", "preserve", "--moduleResolution", "bundler"],
     consumer,
   );
+  // webpack bundles main.ts as tsc emits it, so both bundlers' pages run the same checks.
+  await command(
+    join(consumer, "node_modules/.bin/tsc"),
+    ["-p", "tsconfig.json", "--noEmit", "false", "--outDir", "tsc"],
+    consumer,
+  );
   // Both runtimes ship in the package as built, beside the worker the app's bundler emits.
   for (const [packaged, source] of [
     ["dist/runtime/threads/zopro_spr.js", "packages/web-prover/src/runtime/threads/zopro_spr.js"],
@@ -89,7 +95,7 @@ try {
       {
         mode: "production",
         context: consumer,
-        entry: "./webpack-entry.js",
+        entry: "./tsc/main.js",
         output: { path: join(consumer, "dist-webpack"), filename: "main.js", publicPath: "auto" },
         performance: { hints: false },
       },
@@ -213,23 +219,19 @@ try {
 
 /** Chrome for the pages; Chrome for Testing for an extension, which branded Chrome no longer loads from the command line. */
 async function browser(extension) {
-  const preferences = new logging.Preferences();
-  preferences.setLevel(logging.Type.BROWSER, logging.Level.ALL);
-  const options = new chrome.Options().addArguments("--headless=new").setLoggingPrefs(preferences);
-  if (process.env.CHROME_NO_SANDBOX === "1") options.addArguments("--no-sandbox");
-  const builder = new Builder().forBrowser("chrome");
-  if (extension === undefined) {
-    if (process.env.CHROME_BIN) options.setChromeBinaryPath(process.env.CHROME_BIN);
-  } else {
+  const setup = { logs: [logging.Type.BROWSER] };
+  if (extension !== undefined) {
     const cacheDir = join(root, "target/chrome-for-testing");
     const buildId = chromeForTestingBuild;
     const testing = await install({ browser: Browser.CHROME, buildId, cacheDir });
-    const driver = await install({ browser: Browser.CHROMEDRIVER, buildId, cacheDir });
-    options.setChromeBinaryPath(testing.executablePath);
-    options.addArguments(`--load-extension=${extension}`, `--disable-extensions-except=${extension}`);
-    builder.setChromeService(new chrome.ServiceBuilder(driver.executablePath));
+    const chromedriver = await install({ browser: Browser.CHROMEDRIVER, buildId, cacheDir });
+    Object.assign(setup, {
+      binary: testing.executablePath,
+      chromedriver: chromedriver.executablePath,
+      args: [`--load-extension=${extension}`, `--disable-extensions-except=${extension}`],
+    });
   }
-  const driver = await builder.setChromeOptions(options).build();
+  const driver = await startChrome(setup);
   drivers.push(driver);
   await driver.manage().setTimeouts({ script: 240000 });
   return driver;

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { Builder, By, until } from "selenium-webdriver";
-import chrome from "selenium-webdriver/chrome.js";
+import { By, until } from "selenium-webdriver";
 import { createServer } from "vite";
+import { automaticProvingThreads } from "../../../packages/web-prover/src/proving-threads.ts";
+import { benchPage, startChrome } from "../../../scripts/browser.ts";
 
 const demoUrl = process.env.DEMO_URL || "http://127.0.0.1:5178/";
 const server = process.env.DEMO_URL
@@ -14,34 +15,13 @@ const out =
   process.env.DEMO_REPORT_DIR ||
   fileURLToPath(new URL("../../../target/browser-ui/", import.meta.url));
 await mkdir(out, { recursive: true });
-const options = new chrome.Options().addArguments("--headless", "--window-size=1440,1100");
-if (process.env.CHROME_BIN) options.setChromeBinaryPath(process.env.CHROME_BIN);
-if (process.env.CHROME_NO_SANDBOX === "1") options.addArguments("--no-sandbox");
-const driver = await new Builder().forBrowser("chrome").setChromeOptions(options).build();
+const driver = await startChrome({ window: { width: 1440, height: 1100 } });
 const proofs = [];
 const results = [];
-const button = (text) => driver.findElement(By.xpath(`//button[normalize-space(.)='${text}']`));
-const openOptions = () => driver.findElement(By.css('button[aria-label="Options"]')).click();
-const closeOptions = () => driver.findElement(By.css('button[aria-label="Close options"]')).click();
-async function editValue(element, value) {
-  await driver.executeScript(
-    function (el, next) {
-      const proto =
-        el.tagName === "TEXTAREA" ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-      Object.getOwnPropertyDescriptor(proto, "value").set.call(el, next);
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-    },
-    element,
-    value,
-  );
-}
+const { button, editValue, openOptions, closeOptions, waitForProof } = benchPage(driver);
 async function run(expectedEngine) {
   await driver.findElement(By.css(".main-action .primary-button")).click();
-  await driver.wait(async () => {
-    const errors = await driver.findElements(By.css('[role="alert"]'));
-    if (errors.length) throw new Error(await errors[0].getText());
-    return (await driver.findElements(By.css(".verified"))).length > 0;
-  }, 180000);
+  await waitForProof(180000);
   await (await button("View proof")).click();
   const details = await driver.findElement(By.css(".proof-facts")).getText();
   assert.ok(details.includes(expectedEngine), details);
@@ -61,8 +41,8 @@ try {
     /Cross-origin|Funding|Endpoints|localnet|transaction|Ready when|One sample|Powered by|On your device/i,
   );
   assert.equal(await driver.executeScript("return crossOriginIsolated"), true);
-  const automaticThreads = await driver.executeScript(
-    "return Math.min(18, navigator.hardwareConcurrency || 4)",
+  const automaticThreads = automaticProvingThreads(
+    await driver.executeScript("return navigator.hardwareConcurrency"),
   );
   await writeFile(`${out}/desktop-idle.png`, await driver.takeScreenshot(), "base64");
 
