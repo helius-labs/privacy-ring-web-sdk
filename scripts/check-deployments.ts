@@ -3,12 +3,7 @@ import assert from "node:assert/strict";
 import { createSprClient } from "@heliuslabs/spr";
 import { address } from "@solana/kit";
 import { ZOLANA_PROGRAM_IDS } from "../packages/web-prover/src/protocol.ts";
-import { deployments } from "../examples/wallet/src/deployments.ts";
-
-const genesis = {
-  devnet: "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
-  mainnet: "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
-};
+import { deployments, genesisHashes } from "../examples/wallet/src/deployments.ts";
 
 for (const network of ["devnet", "mainnet"] as const) {
   try {
@@ -17,7 +12,7 @@ for (const network of ["devnet", "mainnet"] as const) {
       ...deployment,
       solanaRpcUrl: process.env[`ZOLANA_${network.toUpperCase()}_RPC_URL`] ?? deployment.solanaRpcUrl,
     });
-    assert.equal(await client.solanaRpc.getGenesisHash().send(), genesis[network]);
+    assert.equal(await client.solanaRpc.getGenesisHash().send(), genesisHashes[network]);
     const programs = Object.values(ZOLANA_PROGRAM_IDS).map((id) => address(id));
     const { value: accounts } = await client.solanaRpc.getMultipleAccounts(programs, { encoding: "base64" }).send();
     assert.equal(accounts.length, programs.length);

@@ -20,8 +20,8 @@ test("deployment pins agree with the SDK and select signed policies by network",
   }
 });
 
-test("demo keys stay separate across networks and preserve the old deployment's key", () => {
-  const storage = new Map([["zolana-example-burner", "01".repeat(32)]]);
+test("demo keys stay separate across networks", () => {
+  const storage = new Map<string, string>();
   const previous = Object.getOwnPropertyDescriptor(globalThis, "localStorage");
   Object.defineProperty(globalThis, "localStorage", { configurable: true, value: {
     getItem: (key: string) => storage.get(key) ?? null,
@@ -36,7 +36,6 @@ test("demo keys stay separate across networks and preserve the old deployment's 
     resetBurner("devnet");
     assert.equal(storage.has(burnerStorageKey("devnet")), false);
     assert.deepEqual(loadBurnerSeed("mainnet"), mainnet);
-    assert.equal(storage.get("zolana-example-burner"), "01".repeat(32));
   } finally {
     if (previous) Object.defineProperty(globalThis, "localStorage", previous);
     else Reflect.deleteProperty(globalThis, "localStorage");

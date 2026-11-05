@@ -42,16 +42,11 @@ Without `VITE_SOLANA_RPC_URL` the page uses the public devnet RPC, which rate-li
 
 Set `VITE_ZOLANA_NETWORK=mainnet` to test the mainnet deployment, with a mainnet
 `VITE_SOLANA_RPC_URL`. The network setting selects Photon, Nitro and its trusted
-attestation policy together. Demo keys are stored separately for each network
-and protocol release. This example keeps its signer in browser storage; use a
+attestation policy together. Demo keys are stored separately for each network.
+This example keeps its signer in browser storage; use a
 dedicated testing account, and use a wallet signer in a production application.
 Endpoint overrides retain the selected network's policy, including through a
 proxy; a different enclave requires a reviewed policy in the application.
-
-v0.6.0-alpha uses shielded-pool program
-`ring1GaLCuJnkUMVkX2JeZLTTX17wKsV4fZmPVzXANW`. Notes and pending transactions
-from earlier program IDs cannot be used in this deployment. The old browser
-storage entry is preserved for recovery with the older SDK.
 
 ## Test
 

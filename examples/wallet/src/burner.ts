@@ -1,6 +1,6 @@
 // A demo signer kept in browser storage, standing in for a wallet extension.
-// Each network and protocol release has its own testing key.
-export const burnerStorageKey = (network: string) => `zolana-example-burner-v0.6.0-${network}`;
+// Each network has its own testing key.
+export const burnerStorageKey = (network: string) => `spr-example-burner-${network}`;
 
 export function loadBurnerSeed(network: string): Uint8Array {
   const key = burnerStorageKey(network);

@@ -321,7 +321,7 @@ describe("key source", () => {
     expect(fetch.mock.calls.map(([input]) => String(input))).toEqual([
       `${KEY_BASE_URL}transfer_confidential_2_2.zopro`,
     ]);
-    expect(KEY_BASE_URL).toMatch(/^https:\/\/.+\/78751f5d1c591777\/$/u);
+    expect(KEY_BASE_URL).toMatch(new RegExp(`^https://.+/${KEY_SET}/$`, "u"));
     prover.terminate();
   });
 });
