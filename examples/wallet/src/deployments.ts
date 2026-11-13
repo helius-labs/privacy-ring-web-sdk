@@ -5,17 +5,21 @@ export function remoteProverConfig(proverUrl: string, policyFile: unknown) {
   return { proverUrl, proverTee: teePolicyFromJson(policyFile) };
 }
 
+// The Helius gateway serves the indexer and the attested prover on one keyed URL.
+export function sprEndpoints(sprUrl: string, apiKey: string) {
+  const url = `${sprUrl}?api-key=${encodeURIComponent(apiKey)}`;
+  return { indexerUrl: url, proverUrl: url };
+}
+
 export const deployments = {
   devnet: {
     solanaRpcUrl: "https://api.devnet.solana.com",
-    indexerUrl: "https://d34xe1hqb2ibg2.cloudfront.net",
-    proverUrl: "https://dd73hh473h6ha.cloudfront.net",
+    sprUrl: "https://devnet.helius-rpc.com/v1/spr",
     proverTee: SignedTeePolicy.forNetwork("devnet"),
   },
   mainnet: {
     solanaRpcUrl: "https://api.mainnet-beta.solana.com",
-    indexerUrl: "https://dgcj4pjarvo65.cloudfront.net",
-    proverUrl: "https://d3ky2kt0ntqxt1.cloudfront.net",
+    sprUrl: "https://mainnet.helius-rpc.com/v1/spr",
     proverTee: SignedTeePolicy.forNetwork("mainnet"),
   },
 } as const;

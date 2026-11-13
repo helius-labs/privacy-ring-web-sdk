@@ -1,7 +1,7 @@
 // Drives the example in Chrome against devnet: a fresh key registers, shields,
 // refuses a nine-input local spend, merges through the TEE, then sends and unshields locally.
 //
-//   ZOLANA_E2E_FUNDER=~/.config/solana/id.json \
+//   ZOLANA_E2E_FUNDER=~/.config/solana/id.json VITE_HELIUS_API_KEY=$API_KEY \
 //   VITE_SOLANA_RPC_URL="https://beta-devnet.helius-rpc.com/?api-key=$API_KEY" npm run test:devnet
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -38,7 +38,11 @@ if (process.env["VITE_ZOLANA_NETWORK"] === "mainnet" ||
     await rpc.getGenesisHash().send() !== "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG") {
   throw new Error("This transaction test requires Solana devnet and the devnet-e deployment");
 }
-const redact = (text: string) => text.replaceAll(rpcUrl, "<rpc>");
+const apiKey = process.env["VITE_HELIUS_API_KEY"] ?? "";
+const redact = (text: string) => {
+  const safe = text.replaceAll(rpcUrl, "<rpc>");
+  return apiKey === "" ? safe : safe.replaceAll(apiKey, "<key>");
+};
 const actionDelay = Number(process.env["ZOLANA_E2E_ACTION_DELAY_MS"] ?? 0);
 assert.ok(Number.isFinite(actionDelay) && actionDelay >= 0);
 

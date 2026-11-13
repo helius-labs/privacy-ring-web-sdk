@@ -31,7 +31,7 @@ import {
   type Transaction,
 } from "@solana/kit";
 import { SprWebProver, type Measurement } from "@heliuslabs/spr-web-prover";
-import { deployments, remoteProverConfig } from "./deployments";
+import { deployments, remoteProverConfig, sprEndpoints } from "./deployments";
 import { limitLocalProofs, localSpendLimit, MERGE_FIRST } from "./local-proving.js";
 export type { Payment };
 
@@ -42,15 +42,16 @@ if (selectedNetwork !== "devnet" && selectedNetwork !== "mainnet") {
 export const network = selectedNetwork;
 export const networkLabel = network === "devnet" ? "Devnet-e" : "Mainnet";
 const deployment = deployments[network];
+const spr = sprEndpoints(deployment.sprUrl, import.meta.env.VITE_HELIUS_API_KEY ?? "");
 
 // The loopback URL is intercepted in the page; witnesses never go there.
 export const endpoints = {
   solanaRpcUrl: import.meta.env.VITE_SOLANA_RPC_URL ?? deployment.solanaRpcUrl,
-  indexerUrl: import.meta.env.VITE_INDEXER_URL ?? deployment.indexerUrl,
+  indexerUrl: import.meta.env.VITE_INDEXER_URL ?? spr.indexerUrl,
   proverUrl: "http://127.0.0.1:3001",
 };
 
-export const teeProverUrl = import.meta.env.VITE_TEE_PROVER_URL ?? deployment.proverUrl;
+export const teeProverUrl = import.meta.env.VITE_TEE_PROVER_URL ?? spr.proverUrl;
 const remoteProver = import.meta.env.VITE_TEE_POLICY === undefined
   ? { proverUrl: teeProverUrl, proverTee: deployment.proverTee }
   : remoteProverConfig(teeProverUrl, JSON.parse(import.meta.env.VITE_TEE_POLICY));
