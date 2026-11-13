@@ -20,7 +20,7 @@ package does not select remote deployments or policies.
 The example defaults to devnet-e. Set `VITE_ZOLANA_NETWORK=mainnet` and a matching
 `VITE_SOLANA_RPC_URL` for mainnet testing. `VITE_TEE_PROVER_URL` and `VITE_TEE_POLICY`
 (JSON contents) override the remote merge configuration. Run
-`npm run test:deployments` for live read-only checks of the example configuration.
+`HELIUS_API_KEY=<key> npm run test:deployments` for live read-only checks of the example configuration.
 
 ## Setup
 

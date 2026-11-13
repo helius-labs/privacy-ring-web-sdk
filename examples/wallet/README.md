@@ -33,12 +33,13 @@ From the repository root:
 ```sh
 npm ci
 npm run build:prover
+VITE_HELIUS_API_KEY="<key>" \
 VITE_SOLANA_RPC_URL="https://beta-devnet.helius-rpc.com/?api-key=<key>" npm run dev --workspace @zolana/wallet-example
 ```
 
 Open http://127.0.0.1:5179, fund the shown address with devnet SOL, then register and shield. Vite emits the prover's worker and runtime from the package; proving keys load on first use from the Zolana key CDN, checked against the digests bundled in the prover, and the page prefetches the 1x2 and 2x2 keys once it connects. The page must be served with the cross-origin isolation headers in `vite.config.ts`, without which the prover does not start.
 
-Without `VITE_SOLANA_RPC_URL` the page uses the public devnet RPC, which rate-limits confirmations. `VITE_INDEXER_URL` defaults to devnet-e's indexer. `VITE_TEE_PROVER_URL` defaults to its attested prover at `https://dd73hh473h6ha.cloudfront.net`. The local prover uses a separate loopback URL intercepted in the page; no local witness is sent there.
+Without `VITE_SOLANA_RPC_URL` the page uses the public devnet RPC, which rate-limits confirmations. The indexer and the attested prover are reached through the Helius gateway at `https://devnet.helius-rpc.com/v1/spr` with `VITE_HELIUS_API_KEY`; `VITE_INDEXER_URL` and `VITE_TEE_PROVER_URL` override them. The local prover uses a separate loopback URL intercepted in the page; no local witness is sent there.
 
 Set `VITE_ZOLANA_NETWORK=mainnet` to test the mainnet deployment, with a mainnet
 `VITE_SOLANA_RPC_URL`. The network setting selects Photon, Nitro and its trusted
@@ -57,6 +58,7 @@ storage entry is preserved for recovery with the older SDK.
 
 ```sh
 ZOLANA_E2E_FUNDER=~/.config/solana/id.json \
+VITE_HELIUS_API_KEY="<key>" \
 VITE_SOLANA_RPC_URL="https://beta-devnet.helius-rpc.com/?api-key=<key>" \
 npm run test:devnet --workspace @zolana/wallet-example
 ```
