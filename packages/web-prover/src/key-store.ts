@@ -373,8 +373,11 @@ export class KeyStore {
         throw new WasmProverError("wasm_key_download_failed");
       }
       let reported = 0;
+      // Reserve this part, not the whole key: a 206 carries exactly the range. A 200
+      // may be the whole key (a host without ranges) or just the range (an
+      // extension's own files), so only then reserve the whole key.
       const part = await abortable(
-        readKey(response, size, (loaded) => {
+        readKey(response, response.status === 200 ? size : end - start, (loaded) => {
           received += loaded - reported;
           reported = loaded;
           downloaded?.(Math.min(received, size));
