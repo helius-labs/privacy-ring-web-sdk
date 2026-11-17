@@ -2,34 +2,35 @@
 
 Written by CI after every push to `main` (`scripts/proof-timing-history.mjs` on `main`), from headless Chrome on each CI runner. Runner numbers compare commits, not laptops: up to about 30 % between two commits can be the runner. The data is in `history/`, a line per commit.
 
-## Linux x64, Intel(R) Xeon(R) 6973P-C, 16 GiB, 4 threads, Chrome 157
+## Linux x64, AMD EPYC 7763 64-Core Processor, 16 GiB, 4 threads, Chrome 157
 
-**Before:** [`3d6e44d`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/3d6e44da79f31a560eb54d5df5253fe927aabfe3) of 2026-11-05. **After:** [`44344d0`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/44344d095f3eff216ee447616e6ef789cb357840) of 2026-11-13.
+**Before:** [`44344d0`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/44344d095f3eff216ee447616e6ef789cb357840) of 2026-11-13. **After:** [`e040452`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/e040452b4de42a21c3532d06344d842eed7e2751) of 2026-11-17.
 
 | by scenario | | 1 → 2 | 2 → 2 | 4 → 2 | 8 → 2 | 16 → 2 | 24 → 2 | merge 24 → 1 |
 |---|---|---|---|---|---|---|---|---|
-| first run, including download | before | 5.70 s (download: 0.72 s, 6.5 MiB) | 8.16 s (download: 0.38 s, 11.6 MiB) | 14.33 s (download: 0.49 s, 21.6 MiB) | 27.57 s (download: 0.85 s, 41.9 MiB) | 53.47 s (download: 1.54 s, 84.2 MiB) | 85.73 s (download: 2.39 s, 138.6 MiB) | 82.07 s (download: 2.33 s, 133.1 MiB) |
-| | after | 5.01 s (download: 1.26 s, 6.5 MiB) (-12 %) | 6.61 s (download: 0.33 s, 11.6 MiB) (-19 %) | 11.49 s (download: 0.52 s, 21.6 MiB) (-20 %) | 22.12 s (download: 0.76 s, 41.9 MiB) (-20 %) | 42.67 s (download: 1.49 s, 84.2 MiB) (-20 %) | 68.62 s (download: 2.36 s, 138.6 MiB) (-20 %) | 66.76 s (download: 2.16 s, 133.1 MiB) (-19 %) |
-| warm | before | 0.87 s | 1.19 s | 2.10 s | 3.67 s | 6.90 s | 11.22 s | 11.04 s |
-| | after | 0.68 s (-22 %) | 1.36 s (+15 %) | 2.06 s | 3.67 s | 6.90 s | 11.20 s | 10.78 s (-2 %) |
-| first run after restart | before | 0.99 s | 1.42 s | 2.27 s | 4.07 s | 7.66 s | 12.32 s | 12.12 s |
-| | after | 0.99 s | 1.57 s (+11 %) | 2.27 s | 3.92 s (-4 %) | 7.52 s (-2 %) | 11.87 s (-4 %) | 11.73 s (-3 %) |
-| repeated after restart | before | 0.92 s | 1.19 s | 2.08 s | 3.69 s | 6.84 s | 11.21 s | 10.96 s |
-| | after | 0.72 s (-22 %) | 1.36 s (+15 %) | 2.08 s | 3.57 s (-3 %) | 6.88 s | 11.09 s (-1 %) | 10.73 s (-2 %) |
+| first run, including download | before | 5.01 s (download: 1.26 s, 6.5 MiB) | 6.61 s (download: 0.33 s, 11.6 MiB) | 11.49 s (download: 0.52 s, 21.6 MiB) | 22.12 s (download: 0.76 s, 41.9 MiB) | 42.67 s (download: 1.49 s, 84.2 MiB) | 68.62 s (download: 2.36 s, 138.6 MiB) | 66.76 s (download: 2.16 s, 133.1 MiB) |
+| | after | 6.11 s (download: 0.75 s, 6.5 MiB) (+22 %) | 11.26 s (download: 0.41 s, 11.6 MiB) (+70 % **!**) | 17.70 s (download: 0.59 s, 21.6 MiB) (+54 % **!**) | 33.10 s (download: 1.07 s, 41.9 MiB) (+50 % **!**) | 66.05 s (download: 3.43 s, 84.2 MiB) (+55 % **!**) | 103.06 s (download: 2.73 s, 138.6 MiB) (+50 % **!**) | 98.89 s (download: 2.56 s, 133.1 MiB) (+48 % **!**) |
+| warm | before | 0.68 s | 1.36 s | 2.06 s | 3.67 s | 6.90 s | 11.20 s | 10.78 s |
+| | after | 0.95 s (+38 % **!**) | 1.97 s (+45 % **!**) | 2.85 s (+38 % **!**) | 4.88 s (+33 %) | 9.17 s (+33 %) | 15.09 s (+35 %) | 14.68 s (+36 % **!**) |
+| first run after restart | before | 0.99 s | 1.57 s | 2.27 s | 3.92 s | 7.52 s | 11.87 s | 11.73 s |
+| | after | 1.13 s (+14 %) | 1.76 s (+12 %) | 3.21 s (+42 % **!**) | 5.39 s (+37 % **!**) | 10.14 s (+35 %) | 16.21 s (+37 % **!**) | 15.79 s (+35 %) |
+| repeated after restart | before | 0.72 s | 1.36 s | 2.08 s | 3.57 s | 6.88 s | 11.09 s | 10.73 s |
+| | after | 1.13 s (+56 % **!**) | 1.57 s (+15 %) | 2.86 s (+38 % **!**) | 4.88 s (+36 % **!**) | 9.14 s (+33 %) | 14.96 s (+35 %) | 14.88 s (+39 % **!**) |
 
 | by stage | | 1 → 2 | 2 → 2 | 4 → 2 | 8 → 2 | 16 → 2 | 24 → 2 | merge 24 → 1 |
 |---|---|---|---|---|---|---|---|---|
-| key load | before | 0.04 s | 0.06 s | 0.10 s | 0.18 s | 0.33 s | 0.55 s | 0.53 s |
-| | after | 0.03 s | 0.06 s | 0.09 s | 0.17 s | 0.35 s | 0.51 s | 0.49 s |
+| key load | before | 0.03 s | 0.06 s | 0.09 s | 0.17 s | 0.35 s | 0.51 s | 0.49 s |
+| | after | 0.04 s | 0.07 s | 0.12 s | 0.21 s | 0.42 s (+20 %) | 0.67 s (+31 %) | 0.67 s (+37 % **!**) |
 | witness | before | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s |
 | | after | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s |
-| prove | before | 0.84 s | 1.15 s | 2.04 s | 3.64 s | 6.87 s | 11.21 s | 10.99 s |
-| | after | 0.68 s (-20 %) | 1.33 s (+16 %) | 2.02 s | 3.54 s (-3 %) | 6.83 s | 11.10 s (-1 %) | 10.76 s (-2 %) |
+| prove | before | 0.68 s | 1.33 s | 2.02 s | 3.54 s | 6.83 s | 11.10 s | 10.76 s |
+| | after | 0.97 s (+43 % **!**) | 1.54 s (+16 %) | 2.80 s (+39 % **!**) | 4.84 s (+37 % **!**) | 9.15 s (+34 %) | 14.98 s (+35 % **!**) | 14.65 s (+36 % **!**) |
 
 ### Proof, last 20 commits
 
 | commit | date | 1 → 2 | 2 → 2 | 4 → 2 | 8 → 2 | 16 → 2 | 24 → 2 | merge 24 → 1 |
 |---|---|---|---|---|---|---|---|---|
+| [`e040452`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/e040452b4de42a21c3532d06344d842eed7e2751) | 2026-11-17 | 0.97 s | 1.54 s | 2.80 s | 4.84 s | 9.15 s | 14.98 s | 14.65 s |
 | [`44344d0`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/44344d095f3eff216ee447616e6ef789cb357840) | 2026-11-13 | 0.68 s | 1.33 s | 2.02 s | 3.54 s | 6.83 s | 11.10 s | 10.76 s |
 | [`3d6e44d`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/3d6e44da79f31a560eb54d5df5253fe927aabfe3) | 2026-11-05 | 0.84 s | 1.15 s | 2.04 s | 3.64 s | 6.87 s | 11.21 s | 10.99 s |
 | [`087bc04`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/087bc04d779f2e8dc8e11f8b3633d5217b1e32d6) | 2026-11-05 | 0.49 s | 0.95 s | 1.47 s | 2.67 s | 4.97 s | 8.15 s | 7.70 s |
@@ -49,12 +50,12 @@ Written by CI after every push to `main` (`scripts/proof-timing-history.mjs` on 
 | [`6a6a0ee`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/6a6a0eeef8d35a743c29c98d5f8e8873e08f6674) | 2026-10-23 | 1.14 s | 1.60 s | 2.90 s | 5.09 s | 9.51 s | 15.27 s | 14.98 s |
 | [`1efa1b3`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/1efa1b383a150debacecead29fb8047a34bcf1f4) | 2026-10-20 | 0.83 s | 1.23 s | 2.13 s | 4.02 s | 7.25 s | 11.71 s | 11.37 s |
 | [`48cb1ed`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/48cb1ed62d90bd951f07e35f7616d5c01c0599f9) | 2026-10-20 | 1.15 s | 1.59 s | 2.81 s | 5.26 s | 9.57 s | 15.46 s | 15.11 s |
-| [`298ba63`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/298ba63e54bfdf76886d25ea574ff0ab9abaad6c) | 2026-10-20 | 0.92 s | 1.58 s | 2.75 s | 5.06 s | 9.25 s | 14.78 s | 14.40 s |
 
 ### First run after a restart, last 20 commits
 
 | commit | date | 1 → 2 | 2 → 2 | 4 → 2 | 8 → 2 | 16 → 2 | 24 → 2 | merge 24 → 1 |
 |---|---|---|---|---|---|---|---|---|
+| [`e040452`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/e040452b4de42a21c3532d06344d842eed7e2751) | 2026-11-17 | 1.13 s | 1.76 s | 3.21 s | 5.39 s | 10.14 s | 16.21 s | 15.79 s |
 | [`44344d0`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/44344d095f3eff216ee447616e6ef789cb357840) | 2026-11-13 | 0.99 s | 1.57 s | 2.27 s | 3.92 s | 7.52 s | 11.87 s | 11.73 s |
 | [`3d6e44d`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/3d6e44da79f31a560eb54d5df5253fe927aabfe3) | 2026-11-05 | 0.99 s | 1.42 s | 2.27 s | 4.07 s | 7.66 s | 12.32 s | 12.12 s |
 | [`087bc04`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/087bc04d779f2e8dc8e11f8b3633d5217b1e32d6) | 2026-11-05 | 0.65 s | 1.17 s | 1.69 s | 3.01 s | 5.50 s | 8.93 s | 8.61 s |
@@ -74,36 +75,36 @@ Written by CI after every push to `main` (`scripts/proof-timing-history.mjs` on 
 | [`6a6a0ee`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/6a6a0eeef8d35a743c29c98d5f8e8873e08f6674) | 2026-10-23 | 1.33 s | 1.82 s | 3.13 s | 5.44 s | 10.07 s | 16.15 s | 15.76 s |
 | [`1efa1b3`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/1efa1b383a150debacecead29fb8047a34bcf1f4) | 2026-10-20 | 1.68 s | 1.88 s | 3.11 s | 5.56 s | 10.09 s | 16.11 s | 15.66 s |
 | [`48cb1ed`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/48cb1ed62d90bd951f07e35f7616d5c01c0599f9) | 2026-10-20 | 2.05 s | 2.56 s | 4.18 s | 7.61 s | 13.84 s | 22.47 s | 21.77 s |
-| [`298ba63`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/298ba63e54bfdf76886d25ea574ff0ab9abaad6c) | 2026-10-20 | 1.77 s | 2.31 s | 3.82 s | 6.80 s | 12.38 s | 19.67 s | 19.17 s |
 
 ## macOS arm64, Apple M1 (Virtual), 7 GiB, 3 threads, Chrome 156
 
-**Before:** [`3d6e44d`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/3d6e44da79f31a560eb54d5df5253fe927aabfe3) of 2026-11-05. **After:** [`44344d0`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/44344d095f3eff216ee447616e6ef789cb357840) of 2026-11-13.
+**Before:** [`44344d0`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/44344d095f3eff216ee447616e6ef789cb357840) of 2026-11-13. **After:** [`e040452`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/e040452b4de42a21c3532d06344d842eed7e2751) of 2026-11-17.
 
 | by scenario | | 1 → 2 | 2 → 2 | 4 → 2 | 8 → 2 | 16 → 2 | 24 → 2 | merge 24 → 1 |
 |---|---|---|---|---|---|---|---|---|
-| first run, including download | before | 13.65 s (download: 3.77 s, 6.5 MiB) | 11.15 s (download: 0.98 s, 11.6 MiB) | 20.09 s (download: 0.93 s, 21.6 MiB) | 33.01 s (download: 7.15 s, 41.9 MiB) | 68.11 s (download: 11.07 s, 84.2 MiB) | 112.89 s (download: 16.91 s, 138.6 MiB) | 97.27 s (download: 12.04 s, 133.1 MiB) |
-| | after | 10.93 s (download: 1.74 s, 6.5 MiB) (-20 %) | 7.14 s (download: 0.66 s, 11.6 MiB) (-36 % **!**) | 18.13 s (download: 1.07 s, 21.6 MiB) (-10 %) | 28.37 s (download: 6.55 s, 41.9 MiB) (-14 %) | 50.10 s (download: 9.15 s, 84.2 MiB) (-26 %) | 77.77 s (download: 11.98 s, 138.6 MiB) (-31 %) | 78.77 s (download: 14.36 s, 133.1 MiB) (-19 %) |
-| warm | before | 0.36 s | 0.39 s | 0.63 s | 1.01 s | 1.91 s | 3.09 s | 3.56 s |
-| | after | 0.32 s | 0.38 s | 0.63 s | 0.91 s (-10 %) | 1.53 s (-20 %) | 3.15 s (+2 %) | 2.47 s (-31 %) |
-| first run after restart | before | 9.59 s | 7.25 s | 8.39 s | 7.86 s | 12.09 s | 20.90 s | 12.46 s |
-| | after | 6.45 s (-33 %) | 6.76 s (-7 %) | 6.99 s (-17 %) | 6.20 s (-21 %) | 7.21 s (-40 % **!**) | 10.30 s (-51 % **!**) | 11.48 s (-8 %) |
-| repeated after restart | before | 0.31 s | 0.43 s | 0.64 s | 1.00 s | 1.65 s | 3.74 s | 2.44 s |
-| | after | 0.28 s | 0.37 s (-14 %) | 0.61 s | 0.92 s (-8 %) | 1.57 s (-5 %) | 2.52 s (-33 %) | 2.85 s (+17 %) |
+| first run, including download | before | 10.93 s (download: 1.74 s, 6.5 MiB) | 7.14 s (download: 0.66 s, 11.6 MiB) | 18.13 s (download: 1.07 s, 21.6 MiB) | 28.37 s (download: 6.55 s, 41.9 MiB) | 50.10 s (download: 9.15 s, 84.2 MiB) | 77.77 s (download: 11.98 s, 138.6 MiB) | 78.77 s (download: 14.36 s, 133.1 MiB) |
+| | after | 14.42 s (download: 3.99 s, 6.5 MiB) (+32 %) | 9.63 s (download: 0.84 s, 11.6 MiB) (+35 %) | 17.57 s (download: 0.91 s, 21.6 MiB) (-3 %) | 34.32 s (download: 7.56 s, 41.9 MiB) (+21 %) | 64.48 s (download: 10.62 s, 84.2 MiB) (+29 %) | 130.23 s (download: 28.15 s, 138.6 MiB) (+67 % **!**) | 102.10 s (download: 14.49 s, 133.1 MiB) (+30 %) |
+| warm | before | 0.32 s | 0.38 s | 0.63 s | 0.91 s | 1.53 s | 3.15 s | 2.47 s |
+| | after | 0.44 s (+35 %) | 0.41 s | 0.65 s | 0.94 s | 1.56 s | 3.06 s (-3 %) | 2.92 s (+18 %) |
+| first run after restart | before | 6.45 s | 6.76 s | 6.99 s | 6.20 s | 7.21 s | 10.30 s | 11.48 s |
+| | after | 9.67 s (+50 % **!**) | 9.34 s (+38 % **!**) | 8.27 s (+18 %) | 8.69 s (+40 % **!**) | 10.51 s (+46 % **!**) | 15.62 s (+52 % **!**) | 15.34 s (+34 %) |
+| repeated after restart | before | 0.28 s | 0.37 s | 0.61 s | 0.92 s | 1.57 s | 2.52 s | 2.85 s |
+| | after | 0.29 s | 0.48 s (+28 %) | 0.65 s | 0.92 s | 1.98 s (+26 %) | 3.28 s (+30 %) | 3.66 s (+28 %) |
 
 | by stage | | 1 → 2 | 2 → 2 | 4 → 2 | 8 → 2 | 16 → 2 | 24 → 2 | merge 24 → 1 |
 |---|---|---|---|---|---|---|---|---|
-| key load | before | 0.08 s | 0.07 s | 0.11 s | 0.28 s | 0.81 s | 1.57 s | 1.33 s |
-| | after | 0.05 s | 0.08 s | 0.09 s | 0.16 s (-43 % **!**) | 0.33 s (-59 % **!**) | 0.73 s (-54 % **!**) | 0.88 s (-34 %) |
+| key load | before | 0.05 s | 0.08 s | 0.09 s | 0.16 s | 0.33 s | 0.73 s | 0.88 s |
+| | after | 0.08 s | 0.08 s | 0.13 s | 0.24 s (+50 % **!**) | 0.29 s | 1.34 s (+84 % **!**) | 1.47 s (+67 % **!**) |
 | witness | before | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s |
 | | after | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s | 0.00 s |
-| prove | before | 0.26 s | 0.36 s | 0.59 s | 0.96 s | 1.79 s | 3.46 s | 2.84 s |
-| | after | 0.24 s | 0.34 s | 0.60 s | 0.88 s (-8 %) | 1.57 s (-12 %) | 2.69 s (-22 %) | 2.62 s (-8 %) |
+| prove | before | 0.24 s | 0.34 s | 0.60 s | 0.88 s | 1.57 s | 2.69 s | 2.62 s |
+| | after | 0.35 s (+44 % **!**) | 0.39 s | 0.60 s | 0.89 s | 1.72 s (+9 %) | 3.45 s (+28 %) | 3.61 s (+38 % **!**) |
 
 ### Proof, last 20 commits
 
 | commit | date | 1 → 2 | 2 → 2 | 4 → 2 | 8 → 2 | 16 → 2 | 24 → 2 | merge 24 → 1 |
 |---|---|---|---|---|---|---|---|---|
+| [`e040452`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/e040452b4de42a21c3532d06344d842eed7e2751) | 2026-11-17 | 0.35 s | 0.39 s | 0.60 s | 0.89 s | 1.72 s | 3.45 s | 3.61 s |
 | [`44344d0`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/44344d095f3eff216ee447616e6ef789cb357840) | 2026-11-13 | 0.24 s | 0.34 s | 0.60 s | 0.88 s | 1.57 s | 2.69 s | 2.62 s |
 | [`3d6e44d`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/3d6e44da79f31a560eb54d5df5253fe927aabfe3) | 2026-11-05 | 0.26 s | 0.36 s | 0.59 s | 0.96 s | 1.79 s | 3.46 s | 2.84 s |
 | [`087bc04`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/087bc04d779f2e8dc8e11f8b3633d5217b1e32d6) | 2026-11-05 | 0.35 s | 0.51 s | 0.60 s | 0.99 s | 1.80 s | 3.26 s | 2.58 s |
@@ -123,12 +124,12 @@ Written by CI after every push to `main` (`scripts/proof-timing-history.mjs` on 
 | [`6a6a0ee`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/6a6a0eeef8d35a743c29c98d5f8e8873e08f6674) | 2026-10-23 | 0.44 s | 0.38 s | 0.65 s | 0.96 s | 1.80 s | 3.31 s | 3.19 s |
 | [`1efa1b3`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/1efa1b383a150debacecead29fb8047a34bcf1f4) | 2026-10-20 | 0.56 s | 0.86 s | 2.40 s | 3.60 s | 6.94 s | 10.72 s | 9.29 s |
 | [`48cb1ed`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/48cb1ed62d90bd951f07e35f7616d5c01c0599f9) | 2026-10-20 | 0.44 s | 0.79 s | 1.83 s | 2.42 s | 4.42 s | 6.95 s | 7.10 s |
-| [`298ba63`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/298ba63e54bfdf76886d25ea574ff0ab9abaad6c) | 2026-10-20 | 0.79 s | 2.06 s | 3.26 s | 4.42 s | 9.01 s | 13.72 s | 12.90 s |
 
 ### First run after a restart, last 20 commits
 
 | commit | date | 1 → 2 | 2 → 2 | 4 → 2 | 8 → 2 | 16 → 2 | 24 → 2 | merge 24 → 1 |
 |---|---|---|---|---|---|---|---|---|
+| [`e040452`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/e040452b4de42a21c3532d06344d842eed7e2751) | 2026-11-17 | 9.67 s | 9.34 s | 8.27 s | 8.69 s | 10.51 s | 15.62 s | 15.34 s |
 | [`44344d0`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/44344d095f3eff216ee447616e6ef789cb357840) | 2026-11-13 | 6.45 s | 6.76 s | 6.99 s | 6.20 s | 7.21 s | 10.30 s | 11.48 s |
 | [`3d6e44d`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/3d6e44da79f31a560eb54d5df5253fe927aabfe3) | 2026-11-05 | 9.59 s | 7.25 s | 8.39 s | 7.86 s | 12.09 s | 20.90 s | 12.46 s |
 | [`087bc04`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/087bc04d779f2e8dc8e11f8b3633d5217b1e32d6) | 2026-11-05 | 9.87 s | 11.84 s | 7.93 s | 8.61 s | 11.57 s | 20.32 s | 12.86 s |
@@ -148,7 +149,6 @@ Written by CI after every push to `main` (`scripts/proof-timing-history.mjs` on 
 | [`6a6a0ee`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/6a6a0eeef8d35a743c29c98d5f8e8873e08f6674) | 2026-10-23 | 9.01 s | 8.07 s | 8.23 s | 8.66 s | 12.52 s | 18.98 s | 14.33 s |
 | [`1efa1b3`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/1efa1b383a150debacecead29fb8047a34bcf1f4) | 2026-10-20 | 1.85 s | 2.25 s | 5.32 s | 6.79 s | 12.30 s | 18.82 s | 16.65 s |
 | [`48cb1ed`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/48cb1ed62d90bd951f07e35f7616d5c01c0599f9) | 2026-10-20 | 0.93 s | 1.56 s | 2.75 s | 4.37 s | 7.20 s | 13.10 s | 12.34 s |
-| [`298ba63`](https://github.com/helius-labs/privacy-ring-web-sdk/commit/298ba63e54bfdf76886d25ea574ff0ab9abaad6c) | 2026-10-20 | 1.81 s | 3.55 s | 5.93 s | 8.08 s | 16.46 s | 27.92 s | 24.51 s |
 
 ## chrome
 
