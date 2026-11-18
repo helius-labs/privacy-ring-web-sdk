@@ -1,13 +1,20 @@
 /**
  * A `fetch` for `SprClientConfig.fetch`: proof requests to `/prove/<key>`
  * are answered by the local prover, other paths below `/prove` are refused, and
- * everything else is delegated, so one shim covers the client.
+ * everything else is delegated, so one shim covers the client. A proof request
+ * for any other URL is refused too: its witness never leaves the page.
  */
 
 import { abortable, rethrowAbort } from "./abortable.js";
 import { WasmProverError } from "./errors.js";
 import type { Measurement } from "./measurement.js";
-import { isWideMerge, proofRequestShape, proveRoute } from "./proof-requests.js";
+import {
+  isProofRequest,
+  isProvePath,
+  isWideMerge,
+  proofRequestShape,
+  proveRoute,
+} from "./proof-requests.js";
 
 export interface ProverFetchOptions {
   /** The prover URL handed to the SDK; requests to it are intercepted. */
@@ -23,14 +30,27 @@ export function createProverFetch(options: ProverFetchOptions): typeof globalThi
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const url = requestUrl(input);
     const route = url === undefined ? undefined : proveRoute(url, options.proverUrl);
-    if (route === undefined) return await options.fetch(input as RequestInfo, init);
-
     const signal =
       init?.signal !== undefined
         ? (init.signal ?? undefined)
         : input instanceof Request
           ? input.signal
           : undefined;
+    if (route === undefined) {
+      // A proof request for another URL: the client's proverUrl is not the
+      // prover's, and a witness sent on would go to whatever listens there.
+      if (url !== undefined && isProvePath(url)) {
+        const body = await abortable(readBody(input, init), signal);
+        if (body !== undefined && isProofRequest(body)) {
+          return proverErrorResponse(
+            new WasmProverError("wasm_prover_url_mismatch"),
+            options.onMeasurement,
+          );
+        }
+      }
+      return await options.fetch(input as RequestInfo, init);
+    }
+
     signal?.throwIfAborted();
     try {
       if (route.kind === "unsupported") throw new WasmProverError("wasm_invalid_request");
@@ -56,7 +76,8 @@ export function createProverFetch(options: ProverFetchOptions): typeof globalThi
 
 function requestUrl(input: RequestInfo | URL): URL | undefined {
   try {
-    if (typeof input === "string") return new URL(input);
+    // Relative to the page, as fetch resolves it.
+    if (typeof input === "string") return new URL(input, globalThis.location?.href);
     if (input instanceof URL) return input;
     return new URL(input.url);
   } catch {
@@ -65,7 +86,9 @@ function requestUrl(input: RequestInfo | URL): URL | undefined {
 }
 
 async function readBody(input: RequestInfo | URL, init?: RequestInit): Promise<string | undefined> {
-  if (typeof init?.body === "string") return init.body;
+  const body = init?.body;
+  if (typeof body === "string") return body;
+  if (body instanceof ArrayBuffer || ArrayBuffer.isView(body)) return new TextDecoder().decode(body);
   if (input instanceof Request) return await input.clone().text();
   return undefined;
 }

@@ -67,7 +67,12 @@ it.each([
   ["http://localhost/prover/proves", undefined],
   ["http://localhost/prover/health", undefined],
   ["http://localhost/other/prove/merge_8_1", undefined],
-  ["http://127.0.0.1/prover/prove", undefined],
+  ["http://127.0.0.1/prover/prove", { kind: "prove" }],
+  ["http://[::1]/prover/prove/merge_8_1", { kind: "prove", keyFile: "merge_8_1.key" }],
+  ["http://127.0.0.1:8080/prover/prove", undefined],
+  ["https://localhost/prover/prove", undefined],
+  ["http://127.0.0.2/prover/prove", undefined],
+  ["http://prover.example/prover/prove", undefined],
 ])("routes %s", (url, route) => {
   expect(proveRoute(new URL(url), "http://localhost/prover/")).toEqual(route);
 });

@@ -117,10 +117,45 @@ describe("prover lifecycle", () => {
 });
 
 describe("fetch cancellation", () => {
-  it("delegates same-origin prove paths outside the configured endpoint", async () => {
+  const post = { method: "POST", body };
+  it.each([
+    ["to another port", new URL("http://localhost:3002/prove/transfer_confidential_2_2"), post],
+    ["to another host's indexed route", "https://prover.example/v1/spr/prove/merge_8_1/indexed", post],
+    ["to another path on the prover's origin", "http://localhost:3001/other/prove", post],
+    ["to a path relative to another page", "/prove/transfer_confidential_2_2", post],
+    ["as a Request", new Request("https://prover.example/prove/transfer_confidential_2_2", post), undefined],
+    ["with a byte body", "https://prover.example/prove", { method: "POST", body: new TextEncoder().encode(body) }],
+  ])("refuses a proof request %s without forwarding it", async (_, input, init) => {
+    vi.stubGlobal("location", new URL("https://wallet.example/app/"));
     const { prover, fetch } = await fixture();
-    const input = "http://localhost:3001/other/prove";
-    const init = { method: "POST", body };
+    const response = await prover.createFetch()(input, init);
+
+    expect(response.status).toBe(500);
+    expect(await response.json()).toMatchObject({ code: "wasm_prover_url_mismatch" });
+    expect(fetch).not.toHaveBeenCalled();
+    expect(TestWorker.instances).toHaveLength(0);
+  });
+
+  it.each(["http://127.0.0.1:3001", "http://[::1]:3001"])(
+    "answers the prover's own path at %s, a loopback alias of its URL",
+    async (origin) => {
+      const { prover, fetch } = await fixture();
+      const response = await prover.createFetch()(`${origin}/prove/transfer_confidential_2_2`, post);
+
+      expect(response.status).toBe(200);
+      expect(await response.text()).toBe('{"proof":"test"}');
+      const sent = fetch.mock.calls.map(([input]) => String(input));
+      expect(sent.filter((url) => url.includes("/prove"))).toEqual([]);
+      prover.terminate();
+    },
+  );
+
+  it.each([
+    ["a status poll elsewhere", "https://prover.example/prove/merge_8_1/status?jobId=1", { method: "GET" }],
+    ["an encrypted proof elsewhere", "https://prover.example/prove/merge_8_1", { method: "POST", body: new Uint8Array([0x93, 0xff]) }],
+    ["other services on the prover's origin", "http://localhost:3001/health", { method: "POST", body: "{}" }],
+  ])("delegates %s", async (_, input, init) => {
+    const { prover, fetch } = await fixture();
 
     await prover.createFetch()(input, init);
 
@@ -436,12 +471,29 @@ describe("prefetch and key progress", () => {
     prover.terminate();
   });
 
-  it("stops reading a key body larger than the pinned key", async () => {
-    const { prover, fetch } = await fixture(() => {}, { onKeyProgress: () => {} });
-    fetch.mockImplementation(async () => new Response(new Uint8Array([1, 2, 3, 4, 5])));
+  it.each([
+    ["with", { onKeyProgress: () => {} }],
+    ["without", {}],
+  ] as const)("stops reading a key body larger than the pinned key %s a progress callback", async (_, options) => {
+    const { prover, fetch } = await fixture(() => {}, options);
+    // The pinned key is 3 bytes; the host sends 2-byte chunks without end.
+    let pulled = 0;
+    let cancelled = false;
+    fetch.mockImplementation(async () => new Response(new ReadableStream<Uint8Array>({
+      pull(controller) {
+        pulled += 1;
+        if (pulled > 64) controller.close();
+        else controller.enqueue(new Uint8Array([1, 2]));
+      },
+      cancel() {
+        cancelled = true;
+      },
+    })));
     await expect(prover.proveRequest(body)).rejects.toMatchObject({
       code: "wasm_key_digest_mismatch",
     });
+    expect(cancelled).toBe(true);
+    expect(pulled).toBeLessThan(5);
     expect(loadedFiles()).toEqual([]);
     prover.terminate();
   });

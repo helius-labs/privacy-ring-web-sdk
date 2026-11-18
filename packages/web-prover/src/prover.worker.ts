@@ -193,12 +193,14 @@ async function prove(body: string): Promise<ProofValue & { backend: "gpu" | "cpu
   try {
     return { ...await prover.prove(body), backend: prover.has_gpu() ? "gpu" : "cpu" };
   } catch (error) {
-    // A GPU that failed, or whose arithmetic went wrong: the CPU proves
-    // from now on.
-    if (!prover.has_gpu()) {
+    // A request the runtime refuses, such as one the circuit does not
+    // satisfy, fails on the CPU too and keeps the GPU.
+    if (!prover.has_gpu() || !gpuFault(error)) {
       if (error === "unverified") throw new WasmProverError("wasm_verify_failed");
       throw error;
     }
+    // A GPU that failed, or whose arithmetic went wrong: the CPU proves
+    // from now on.
     prover.drop_gpu();
     try {
       return { ...await prover.prove(body), backend: "cpu" };
@@ -207,6 +209,15 @@ async function prove(body: string): Promise<ProofValue & { backend: "gpu" | "cpu
       throw retried;
     }
   }
+}
+
+/**
+ * Whether a rejected proof was the GPU's fault: the runtime rejects with
+ * "unverified" when a proof did not verify, and with "the GPU failed: ..."
+ * when the GPU's work did not finish. Every other rejection is the request's.
+ */
+function gpuFault(error: unknown): boolean {
+  return error === "unverified" || (error instanceof Error && error.message.startsWith("the GPU failed"));
 }
 
 async function handle(request: WorkerRequest): Promise<unknown> {
