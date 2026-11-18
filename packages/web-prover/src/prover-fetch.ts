@@ -38,7 +38,7 @@ export function createProverFetch(options: ProverFetchOptions): typeof globalThi
       if (body === undefined) throw new WasmProverError("wasm_invalid_request");
       if (isWideMerge(body)) throw new WasmProverError("wasm_merge_too_wide");
       // The path names the proving key; prove nothing the body does not match.
-      if (route.keyFile !== undefined && proofRequestShape(body)?.keyFile !== route.keyFile) {
+      if (proofRequestShape(body)?.keyFile !== route.keyFile) {
         throw new WasmProverError("wasm_invalid_request");
       }
       const result = await options.prove(body, signal);
