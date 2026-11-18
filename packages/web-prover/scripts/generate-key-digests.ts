@@ -1,6 +1,7 @@
 // Writes src/key-digests.ts from the pinned zopro-keys.lock; the package build
 // and tests run it first.
 import { readFile, writeFile } from "node:fs/promises";
+import { browserKeyCircuit } from "../src/key-names.ts";
 
 /** One zopro key file and the gnark proving key it was built from. */
 interface LockEntry {
@@ -13,9 +14,6 @@ interface LockEntry {
 const lockUrl = new URL("../../../zopro-keys.lock", import.meta.url);
 const outputUrl = new URL("../src/key-digests.ts", import.meta.url);
 
-/** The keys the browser prover loads: confidential transfers and merges. */
-const browserKey = /^(transfer_confidential_\d+_\d+|merge_\d+_1)\.key$/u;
-
 const lock = JSON.parse(await readFile(lockUrl, "utf8")) as {
   readonly prefix: string;
   readonly baseUrl: string;
@@ -26,7 +24,7 @@ if (keySet === undefined || !/^[0-9a-f]+$/u.test(keySet)) throw new Error("Unexp
 if (!lock.baseUrl.startsWith("https://") || !lock.baseUrl.endsWith(`/${lock.prefix}/`))
   throw new Error("zopro-keys.lock baseUrl does not name the lock's key set");
 const entries = Object.entries(lock.keys)
-  .filter(([name]) => browserKey.test(name))
+  .filter(([name]) => browserKeyCircuit(name) !== undefined)
   .sort(([a], [b]) => a.localeCompare(b))
   .map(
     ([name, { file, size, sha256, key_sha256 }]) =>

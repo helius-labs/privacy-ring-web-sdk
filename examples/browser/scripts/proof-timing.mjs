@@ -20,35 +20,27 @@
 // decode); the `restart` rows reload the page, so the first proof loads the
 // key from the raw-key cache. ZOLANA_TIMING_DIR/<label>/ receives the lines
 // as timing.log and the machine as runner.json (browser, system, processor,
-// memory, threads);
-// ZOLANA_TIMING_LABEL names it, chrome-linux, chrome-macos or
-// chrome-windows by default. Keys come from where the page loads them: set
+// memory, threads); ZOLANA_TIMING_LABEL names it, chrome-linux or
+// chrome-macos by default. Keys come from where the page loads them: set
 // VITE_ZOLANA_KEYS_URL to the key CDN for shapes that are not staged under
 // public/keys. ZOLANA_TIMING_BUILT=1 serves the built page (`npm run
 // build:example`, in dist/), as CI does, instead of the Vite dev server;
 // DEMO_URL points at a running page. CHROME_BIN and CHROME_NO_SANDBOX work
-// as in the browser test; ZOLANA_TIMING_CHROME_ARGS adds Chrome switches.
+// as in scripts/browser.ts; ZOLANA_TIMING_CHROME_ARGS adds Chrome switches.
 import { readFileSync, appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { cpus, totalmem } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Builder, By } from "selenium-webdriver";
-import chrome from "selenium-webdriver/chrome.js";
+import { By } from "selenium-webdriver";
 import { createServer, preview } from "vite";
+import { benchPage, startChrome } from "../../../scripts/browser.ts";
+import { lockedKey } from "../../../scripts/locked-keys.ts";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const lock = JSON.parse(
-  readFileSync(new URL("../../../zopro-keys.lock", import.meta.url), "utf8"),
-);
 const shapes = (process.env.ZOLANA_TIMING_SHAPES || "1x2,2x2,4x2,8x2,16x2,24x2,merge-24x1").split(",");
 const rounds = Number(process.env.ZOLANA_TIMING_ROUNDS || 4);
 const inputsOf = (shape) => Number(shape.replace("merge-", "").split("x")[0]);
 const roundsOf = (shape) => (inputsOf(shape) > 8 ? Math.min(rounds, 2) : rounds);
-const requestOf = (shape) => (shape.startsWith("merge-") ? `${shape}.json` : `transfer-${shape}.json`);
-const keyOf = (shape) =>
-  shape.startsWith("merge-")
-    ? `merge_${shape.replace("merge-", "").replace("x", "_")}.key`
-    : `transfer_confidential_${shape.replace("x", "_")}.key`;
 const system = { darwin: "macos", linux: "linux", win32: "windows" }[process.platform] ?? process.platform;
 const label = process.env.ZOLANA_TIMING_LABEL || `chrome-${system}`;
 const threads = process.env.ZOLANA_TIMING_THREADS ? Number(process.env.ZOLANA_TIMING_THREADS) : undefined;
@@ -66,17 +58,16 @@ async function serve() {
 }
 const server = await serve();
 const demoUrl = process.env.DEMO_URL || server.resolvedUrls.local[0];
-const options = new chrome.Options().addArguments("--headless", "--window-size=1440,1100");
 // ZOLANA_TIMING_CHROME_ARGS adds switches, e.g. --disable-features=WebGPU to
 // time the kernel's CPU path where the GPU path is the default.
-for (const arg of (process.env.ZOLANA_TIMING_CHROME_ARGS ?? "").split(" ").filter(Boolean)) options.addArguments(arg);
-if (process.env.CHROME_BIN) options.setChromeBinaryPath(process.env.CHROME_BIN);
-if (process.env.CHROME_NO_SANDBOX === "1") options.addArguments("--no-sandbox");
+const args = (process.env.ZOLANA_TIMING_CHROME_ARGS ?? "").split(" ").filter(Boolean);
 let driver;
+let page;
 
 /** A new browser on the bench page; the kernel needs cross-origin isolation. */
 async function open() {
-  driver = await new Builder().forBrowser("chrome").setChromeOptions(options).build();
+  driver = await startChrome({ window: { width: 1440, height: 1100 }, args });
+  page = benchPage(driver);
   if (threads !== undefined) {
     await driver.sendDevToolsCommand("Page.addScriptToEvaluateOnNewDocument", {
       source: `Object.defineProperty(Navigator.prototype, "hardwareConcurrency", { get: () => ${String(threads)} });`,
@@ -104,41 +95,23 @@ async function open() {
   }
 }
 
-const button = (text) => driver.findElement(By.xpath(`//button[normalize-space(.)='${text}']`));
-const ready = () => driver.wait(async () => (await button("Generate proof")).isEnabled(), 60000);
+const ready = () => driver.wait(async () => (await page.button("Generate proof")).isEnabled(), 60000);
 
 async function setRequest(json) {
-  await driver.findElement(By.css('button[aria-label="Options"]')).click();
+  await page.openOptions();
   await driver.findElement(By.css(".input-details summary")).click();
-  const textarea = await driver.findElement(By.id("proof-input"));
-  await driver.executeScript(
-    function (el, next) {
-      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, "value").set.call(el, next);
-      el.dispatchEvent(new Event("input", { bubbles: true }));
-    },
-    textarea,
-    json,
-  );
-  await driver.findElement(By.css('button[aria-label="Close options"]')).click();
+  await page.editValue(await driver.findElement(By.id("proof-input")), json);
+  await page.closeOptions();
 }
 
 /** One proof: the page's proving and verification times, and the wall clock around them. */
 async function prove() {
   const started = performance.now();
-  await (await button("Generate proof")).click();
+  await (await page.button("Generate proof")).click();
   // Five minutes is several times the slowest proof on a runner; a kernel
   // out of memory stalls rather than fails. Polled every 10 ms: selenium's
   // default of 200 ms would round every total up to its next poll.
-  await driver.wait(
-    async () => {
-      const errors = await driver.findElements(By.css('[role="alert"]'));
-      if (errors.length) throw new Error(await errors[0].getText());
-      return (await driver.findElements(By.css(".verified"))).length > 0;
-    },
-    300000,
-    undefined,
-    10,
-  );
+  await page.waitForProof(300000, 10);
   const total = performance.now() - started;
   const proving = parseFloat(await driver.findElement(By.css(".timing span")).getText());
   const verify = parseFloat(await driver.findElement(By.css(".verify-time")).getText());
@@ -147,7 +120,7 @@ async function prove() {
 
 /** The key preparation the page shows in the proof facts: the first load of a page. */
 async function keyLoadMs() {
-  await (await button("View proof")).click();
+  await (await page.button("View proof")).click();
   const facts = await driver.findElement(By.css(".proof-facts")).getText();
   await driver.findElement(By.css('button[aria-label="Close proof"]')).click();
   const match = /Key preparation\s+([\d.]+) s/u.exec(facts);
@@ -187,8 +160,8 @@ let failed = false;
 try {
   await open();
   for (const shape of shapes) {
-    const json = readFileSync(`${root}../../fixtures/${requestOf(shape)}`, "utf8");
-    const keyBytes = lock.keys[keyOf(shape)]?.size ?? 0;
+    const { fixture, size: keyBytes } = lockedKey(shape);
+    const json = readFileSync(`${root}../../fixtures/${fixture}`, "utf8");
     let run = "fresh";
     try {
       await driver.executeScript(

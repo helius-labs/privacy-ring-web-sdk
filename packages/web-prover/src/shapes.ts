@@ -9,6 +9,7 @@
  */
 
 import { KEY_DIGESTS } from "./key-digests.js";
+import { browserKeyCircuit, type KeyCircuit } from "./key-names.js";
 
 export interface Shape {
   readonly inputs: number;
@@ -24,24 +25,22 @@ export interface ShapeKey extends Shape {
   readonly keyBytes: number;
 }
 
-/** The pinned keys whose names match `pattern`, smallest first. */
-function pinnedShapes(
-  pattern: RegExp,
-  shape: (inputs: number, outputs: number, keyFile: string, keyBytes: number) => ShapeKey,
-): readonly ShapeKey[] {
+/** The pinned keys of `circuitType`, smallest first. */
+function pinnedShapes(circuitType: KeyCircuit["circuitType"], label: (shape: Shape) => string): readonly ShapeKey[] {
   const shapes: ShapeKey[] = [];
   for (const [keyFile, { size }] of Object.entries(KEY_DIGESTS)) {
-    const match = pattern.exec(keyFile);
-    if (match !== null) shapes.push(shape(Number(match[1]), Number(match[2]), keyFile, size));
+    const circuit = browserKeyCircuit(keyFile);
+    if (circuit?.circuitType !== circuitType) continue;
+    const { inputs, outputs } = circuit;
+    shapes.push(Object.freeze({ inputs, outputs, label: label(circuit), keyFile, keyBytes: size }));
   }
   return Object.freeze(shapes.sort((a, b) => a.keyBytes - b.keyBytes));
 }
 
 /** Confidential (default transact) rail only, ring rail keys are out of scope. */
 export const TRANSFER_SHAPES: readonly ShapeKey[] = pinnedShapes(
-  /^transfer_confidential_(\d+)_(\d+)\.key$/u,
-  (inputs, outputs, keyFile, keyBytes) =>
-    Object.freeze({ inputs, outputs, label: `${String(inputs)}x${String(outputs)}`, keyFile, keyBytes }),
+  "transfer-confidential",
+  ({ inputs, outputs }) => `${String(inputs)}x${String(outputs)}`,
 );
 
 /**
@@ -55,9 +54,9 @@ export const MAX_BROWSER_MERGE_INPUTS = 24;
  * `SupportedInputCounts` in `spp_merge/shared` up to `MAX_BROWSER_MERGE_INPUTS`.
  */
 export const MERGE_SHAPES: readonly ShapeKey[] = Object.freeze(
-  pinnedShapes(/^merge_(\d+)_(1)\.key$/u, (inputs, outputs, keyFile, keyBytes) =>
-    Object.freeze({ inputs, outputs, label: `merge ${String(inputs)}x1`, keyFile, keyBytes }),
-  ).filter((shape) => shape.inputs <= MAX_BROWSER_MERGE_INPUTS),
+  pinnedShapes("merge", ({ inputs }) => `merge ${String(inputs)}x1`).filter(
+    (shape) => shape.inputs <= MAX_BROWSER_MERGE_INPUTS,
+  ),
 );
 /** The smallest merge circuit. */
 export const MERGE_SHAPE: ShapeKey = MERGE_SHAPES[0]!;

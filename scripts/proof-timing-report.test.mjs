@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { markdown, records, report, runnerName, runnersMarkdown } from "./proof-timing-report.mjs";
+import { duration, markdown, records, report, runnerName, runnersMarkdown } from "./proof-timing-report.mjs";
 
 function line(run, round, total, extra = {}) {
   return `ZOLANA_TIMING ${JSON.stringify({
@@ -48,12 +48,19 @@ test("the markdown carries the download bracket and the change against a baselin
   assert.match(text, /\| first run, including download \| before \| 2\.60 s \(download: 1\.90 s, 8\.8 MiB\) \|/u);
   assert.match(text, /\| \| after \| 2\.60 s \(download: 1\.90 s, 8\.8 MiB\) \|/u);
   assert.match(text, /\| warm \| before \| 0\.25 s \|\n\| \| after \| 0\.32 s \(\+28 % \*\*!\*\*\) \|/u);
-  assert.match(text, /\| key load \| before \| 0\.03 s/u);
+  assert.match(text, /\| key load \| before \| 30 ms/u);
   // Verification is not a cost of proving; a two-millisecond change is no percentage.
   assert.doesNotMatch(text, /\| verify/u);
   baseline.stages["1x2"].witness_ms = 2;
-  assert.match(markdown(current, baseline, 15), /\| \| after \| 0\.00 s \|\n/u);
+  assert.match(markdown(current, baseline, 15), /\| witness \| before \| 2 ms \|\n\| \| after \| 0 ms \|\n/u);
   assert.doesNotMatch(markdown(current, undefined, 15), /%|\| before \||\| after \|/u);
+});
+
+test("a stage under a second reads in milliseconds, a longer one in seconds", () => {
+  assert.equal(duration(2.4), "2 ms");
+  assert.equal(duration(999.4), "999 ms");
+  assert.equal(duration(999.6), "1.00 s");
+  assert.equal(duration(2345), "2.35 s");
 });
 
 test("merges follow transfers, and a failed shape shows in its rows and under the tables", () => {
@@ -116,7 +123,7 @@ test("the runners come in one report: the proof by runner, then each runner's ta
   // history has an empty before row.
   assert.match(
     text,
-    /\| Linux x64, 4 threads, Chrome 141 \| before \| 0\.40 s \|\n\| \| after \| 0\.30 s \(-25 % \*\*!\*\*\) \|\n\| macOS arm64, 3 threads, Chrome 141 \| before \|  \|\n\| \| after \| 0\.20 s \|/u,
+    /\| Linux x64, 4 threads, Chrome 141 \| before \| 400 ms \|\n\| \| after \| 300 ms \(-25 % \*\*!\*\*\) \|\n\| macOS arm64, 3 threads, Chrome 141 \| before \|  \|\n\| \| after \| 200 ms \|/u,
   );
   assert.match(text, /<details><summary>Linux x64, 4 threads, Chrome 141<\/summary>\n\n\| by scenario \| \| 1 → 2 \|/u);
   assert.equal(text.match(/<\/details>/gu)?.length, 2);
