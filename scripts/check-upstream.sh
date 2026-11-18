@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Fails when the zopro key pins or the wallet example's SDK pin drift from
 # the zolana release pinned in upstream.lock.json: every zopro key must be
-# built from the gnark key upstream pins for its circuit. The example installs
-# the SDK from npm, so its pin may lag the release's until that version is
-# published there. Set ZOLANA_SRC to an existing checkout to skip the clone.
+# built from the gnark key upstream pins for its circuit, and the SDK the
+# example installs from npm must be published from the pinned commit. The
+# example's pin may lag the release's until that version is published there.
+# Set ZOLANA_SRC to an existing checkout to skip the clone.
 set -euo pipefail
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -65,6 +66,13 @@ if [[ "$pinned" != "$sdk" ]]; then
     fail "examples/wallet pins @heliuslabs/spr $pinned, upstream.lock.json says $sdk, which is on npm"
   else
     echo "note: examples/wallet stays on @heliuslabs/spr $pinned until $sdk is on npm; its installed SDK is not checked against the keys" >&2
+  fi
+fi
+if [[ "$pinned" == "$sdk" ]]; then
+  if ! head="$(npm view "@heliuslabs/spr@$sdk" gitHead)"; then
+    fail "cannot read @heliuslabs/spr@$sdk's source commit from npm"
+  elif [[ "$head" != "$revision" ]]; then
+    fail "@heliuslabs/spr@$sdk on npm is published from ${head:-<unknown>}, upstream.lock.json pins $revision"
   fi
 fi
 installed="$root/node_modules/@heliuslabs/spr"
